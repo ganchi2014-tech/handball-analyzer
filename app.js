@@ -1,3 +1,33 @@
+/* ============================================================
+ *  Handball Analyzer — app.js (bootstrap + DOM + state wiring)
+ * ============================================================
+ *
+ *  Pure helpers (no DOM, testable) live in lib/:
+ *    - lib/roster.js   : HA.roster  (load/save, defaults, name utils)
+ *    - lib/stats.js    : HA.stats   (score, dashboard, aggregations)
+ *    - lib/csv.js      : HA.csv     (escape, shotToRow, download)
+ *
+ *  Section map (search the BANNER text to jump):
+ *    [STATE]          state {}, constants
+ *    [UI REFS]        ui = { ... }
+ *    [PERSISTENCE]    saveState / loadState / clearSavedState
+ *    [TIMER+PERIOD]   timer toggle, period chip
+ *    [GK ROW]         renderGkRow (dynamic from roster)
+ *    [ROSTER]         playerPositions wrapper
+ *    [PLAYER MODAL]   populatePlayerStep, bench toggle
+ *    [LINEUP MODAL]   openLineupModal, bench/field player swap
+ *    [COURT INPUT]    onCourtDown/Up/Move, swipe vs tap, hint
+ *    [RESULT FLOW]    step-result → step-course → step-player
+ *    [TURNOVER]       TO button, step-to-reason
+ *    [PLOTS]          renderPlots, attachPlotLongPress
+ *    [STATS / SUMMARY] calculateStats, generateSummary
+ *    [SETTINGS MODAL] roster editor, data management
+ *    [EDIT SHOT]      long-press → openEditShotModal
+ *    [HISTORY+CSV]    archive, history modal, export
+ *    [MODAL CLOSE]    attachSwipeDownClose for all modals
+ *    [BOOT]           restore on load
+ * ============================================================ */
+
 document.addEventListener('DOMContentLoaded', () => {
     const state = {
         mode: 'attack',
@@ -206,53 +236,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // renderGkRow() is called after roster is loaded (below)
 
-    // ── Roster (loadable, editable) ──
-    const ROSTER_KEY = 'handball-analyzer-roster-v1';
-    const DEFAULT_GKS_SHORT = ['桑原', '杉本', '小川', '田口', '関山'];
-    const DEFAULT_PLAYER_NAMES = [
-        '③赤塚', '③岩噌', '③川崎', '③北村', '③辻', '③中田', '③伴', '③山本', '③桑原', '③杉本',
-        '②新井', '②猪田', '②北林', '②田端', '②藤川', '②松岡', '②村田', '②安田', '②小川', '②田口',
-        '①石黒', '①岩噌', '①大野', '①北川', '①嶌本', '①福原', '①増田', '①水田', '①宮崎', '①森井', '①山崎', '①関山'
-    ];
-    function stripGradePrefix(name) { return name.replace(/^[①②③]/, ''); }
-    function makeDefaultRoster() {
-        return DEFAULT_PLAYER_NAMES.map(name => ({
-            name,
-            isGK: DEFAULT_GKS_SHORT.includes(stripGradePrefix(name))
-        }));
-    }
+    // ── Roster (loadable, editable) — delegates to HA.roster ──
+    const stripGradePrefix = HA.roster.stripGradePrefix;
+    const makeDefaultRoster = HA.roster.makeDefault;
+    function saveRoster() { HA.roster.save(state.roster); }
 
-    function loadRoster() {
-        try {
-            const raw = localStorage.getItem(ROSTER_KEY);
-            if (!raw) return makeDefaultRoster();
-            const arr = JSON.parse(raw);
-            if (!Array.isArray(arr) || arr.length === 0) return makeDefaultRoster();
-            return arr.map(item => {
-                if (typeof item === 'string') return { name: item, isGK: false };
-                if (item && typeof item.name === 'string') {
-                    return { name: item.name, isGK: !!item.isGK };
-                }
-                return null;
-            }).filter(Boolean);
-        } catch (e) {
-            console.warn('loadRoster failed', e);
-            return makeDefaultRoster();
-        }
-    }
-
-    function saveRoster() {
-        try { localStorage.setItem(ROSTER_KEY, JSON.stringify(state.roster)); }
-        catch (e) { console.warn('saveRoster failed', e); }
-    }
-
-    state.roster = loadRoster();
+    state.roster = HA.roster.load();
     let playerPositions = state.roster.map(p => p.name);
     function refreshRosterDerivatives() {
         playerPositions = state.roster.map(p => p.name);
     }
     function getGkShortNames() {
-        return state.roster.filter(p => p.isGK).map(p => stripGradePrefix(p.name));
+        return HA.roster.getGkShortNames(state.roster);
     }
     renderGkRow();
 
@@ -795,31 +790,12 @@ document.addEventListener('DOMContentLoaded', () => {
         plotEl.addEventListener('mouseleave', end);
     }
 
-    // ── A1: 攻撃効率 / シュート決定率 / GKセーブ率 を分離計算 ──
+    // ── Dashboard stats (computation delegated to HA.stats) ──
     function calculateStats() {
-        let attackTotal = 0, attackShots = 0, attackGoals = 0;
-        let defShotsOnTarget = 0, gkSaves = 0;
-
-        state.shots.forEach(shot => {
-            if (shot.mode === 'attack') {
-                attackTotal++;
-                if (shot.result !== 'turnover') attackShots++;
-                if (shot.result === 'goal') attackGoals++;
-            } else {
-                if (shot.result === 'goal' || shot.result === 'save') {
-                    defShotsOnTarget++;
-                    if (shot.result === 'save') gkSaves++;
-                }
-            }
-        });
-
-        const attackEfficiency = attackTotal === 0 ? 0 : Math.round((attackGoals / attackTotal) * 100);
-        const shotAccuracy = attackShots === 0 ? 0 : Math.round((attackGoals / attackShots) * 100);
-        const saveRate = defShotsOnTarget === 0 ? 0 : Math.round((gkSaves / defShotsOnTarget) * 100);
-
-        ui.statAttackEfficiency.textContent = `${attackEfficiency}%`;
-        ui.statShotAccuracy.textContent = `${shotAccuracy}%`;
-        ui.statGkSave.textContent = `${saveRate}%`;
+        const d = HA.stats.computeDashboard(state.shots);
+        ui.statAttackEfficiency.textContent = `${d.attackEfficiency}%`;
+        ui.statShotAccuracy.textContent = `${d.shotAccuracy}%`;
+        ui.statGkSave.textContent = `${d.saveRate}%`;
     }
 
     // ── B2: Undo with toast feedback ──
@@ -990,18 +966,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // ── 前半 / 後半 ブレイクダウン ──
         if (ui.periodBreakdown) {
-            const halves = { 1: { us: 0, opp: 0, attShots: 0, attTO: 0 },
-                             2: { us: 0, opp: 0, attShots: 0, attTO: 0 } };
-            state.shots.forEach(s => {
-                const p = s.period === 2 ? 2 : 1;
-                if (s.mode === 'attack') {
-                    if (s.result === 'goal') halves[p].us++;
-                    if (s.result === 'turnover') halves[p].attTO++;
-                    else halves[p].attShots++;
-                } else {
-                    if (s.result === 'goal') halves[p].opp++;
-                }
-            });
+            const halves = HA.stats.aggregateByPeriod(state.shots);
             const fmt = (h) => `${h.us} - ${h.opp}　<span style="color:#888; font-size:0.85em;">(ST ${h.attShots} / TO ${h.attTO})</span>`;
             ui.periodBreakdown.innerHTML =
                 `<div style="margin-bottom:4px;"><strong style="color:var(--primary);">前半</strong>: ${fmt(halves[1])}</div>` +
@@ -1010,23 +975,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // ── 攻撃種別ブレイクダウン（自チームのみ） ──
         if (ui.attackTypeBreakdown) {
-            const types = {
-                set:  { label: 'セット',  color: 'var(--primary)',  goals: 0, shots: 0 },
-                fast: { label: '速攻',    color: 'var(--success)',  goals: 0, shots: 0 },
-                '7m': { label: '7m',      color: 'var(--save)',     goals: 0, shots: 0 }
+            const labels = {
+                set:  { label: 'セット',  color: 'var(--primary)' },
+                fast: { label: '速攻',    color: 'var(--success)' },
+                '7m': { label: '7m',      color: 'var(--save)' }
             };
-            let untagged = 0;
-            state.shots.forEach(s => {
-                if (s.mode !== 'attack') return;
-                if (s.result === 'turnover') return;
-                const t = s.attackType;
-                if (!types[t]) { untagged++; return; }
-                types[t].shots++;
-                if (s.result === 'goal') types[t].goals++;
-            });
-            const cells = Object.entries(types).map(([key, t]) => {
+            const { types, untagged } = HA.stats.aggregateByAttackType(state.shots);
+            const cells = Object.entries(labels).map(([key, meta]) => {
+                const t = types[key];
                 const rate = t.shots === 0 ? '-' : `${Math.round((t.goals/t.shots)*100)}%`;
-                return `<div><strong style="color:${t.color};">${t.label}</strong>: ${t.goals}/${t.shots} (${rate})</div>`;
+                return `<div><strong style="color:${meta.color};">${meta.label}</strong>: ${t.goals}/${t.shots} (${rate})</div>`;
             }).join('');
             const untaggedNote = untagged > 0 ? `<div style="color:#666; font-size:0.8em; margin-top:3px;">未分類: ${untagged}</div>` : '';
             ui.attackTypeBreakdown.innerHTML = `<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">${cells}</div>${untaggedNote}`;
@@ -1034,19 +992,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // ── コース別ブレイクダウン ──
         if (ui.courseBreakdown) {
-            // For attack: each zone shows goals/onTarget (= goals + saves with that course recorded)
-            // For defense: each zone shows goals/onTarget (failed/total) — i.e. failures to save
-            const zones = ['TL', 'TR', 'ML', 'MR', 'BL', 'BR'];
-            const makeBuckets = () => Object.fromEntries(zones.map(z => [z, {g:0, s:0}]));
-            const off = makeBuckets();
-            const def = makeBuckets();
-            state.shots.forEach(sh => {
-                if (!sh.course || !zones.includes(sh.course)) return;
-                if (sh.result !== 'goal' && sh.result !== 'save') return;
-                const bucket = sh.mode === 'attack' ? off[sh.course] : def[sh.course];
-                if (sh.result === 'goal') bucket.g++;
-                else bucket.s++;
-            });
+            const { zones, off, def } = HA.stats.aggregateByCourse(state.shots);
             const renderGrid = (data, title, color, modeLabel) => {
                 const cells = zones.map(z => {
                     const tot = data[z].g + data[z].s;
@@ -1074,18 +1020,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 passive: '⏱️ パッシブ',
                 other: '❓ その他'
             };
-            const offReasons = {};
-            const defReasons = {};
-            let offUnk = 0, defUnk = 0;
-            state.shots.forEach(s => {
-                if (s.result !== 'turnover') return;
-                const bucket = s.mode === 'attack' ? offReasons : defReasons;
-                if (!s.toReason) {
-                    if (s.mode === 'attack') offUnk++; else defUnk++;
-                    return;
-                }
-                bucket[s.toReason] = (bucket[s.toReason] || 0) + 1;
-            });
+            const { off: offReasons, def: defReasons, offUnk, defUnk } = HA.stats.aggregateTurnoverReasons(state.shots);
             function reasonsRow(bucket, unk, label, color) {
                 const parts = Object.keys(reasonLabels)
                     .filter(k => bucket[k])
@@ -1386,8 +1321,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let editingPlayerCache = null;
 
     function recomputeScore() {
-        state.score.us = state.shots.filter(s => s.mode === 'attack' && s.result === 'goal').length;
-        state.score.opponent = state.shots.filter(s => s.mode === 'defense' && s.result === 'goal').length;
+        const { us, opp } = HA.stats.computeScore(state.shots);
+        state.score.us = us;
+        state.score.opponent = opp;
         updateScoreDOM();
     }
 
@@ -1538,10 +1474,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     attachSwipeDownClose(document.getElementById('edit-shot-modal'), () => window.closeEditShotModal());
 
-    // ── Match history + CSV export ──
+    // ── Match history + CSV export (CSV utils delegated to HA.csv) ──
     const HISTORY_KEY = 'handball-analyzer-history-v1';
-    const CSV_HEADERS = ['date', 'opponent', 'period', 'time_s', 'mode', 'result',
-                         'attack_type', 'course', 'player', 'gk', 'to_reason', 'x', 'y'];
 
     const ui_hist = {
         modal: document.getElementById('history-modal'),
@@ -1617,53 +1551,13 @@ document.addEventListener('DOMContentLoaded', () => {
         window.closeSettingsModal();
     });
 
-    // ── CSV export ──
-    function csvEscape(v) {
-        const s = v == null ? '' : String(v);
-        return /[,"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-    }
-    function shotToCsvRow(s, match) {
-        return [
-            match.date || '', match.opponent || '',
-            s.period == null ? '' : s.period,
-            s.time == null ? '' : s.time,
-            s.mode || '', s.result || '',
-            s.attackType || '', s.course || '',
-            s.player || '', s.gk || '', s.toReason || '',
-            s.x == null ? '' : Number(s.x).toFixed(2),
-            s.y == null ? '' : Number(s.y).toFixed(2)
-        ];
-    }
-    function matchToCsv(match) {
-        const lines = [CSV_HEADERS.map(csvEscape).join(',')];
-        (match.shots || []).forEach(s => {
-            lines.push(shotToCsvRow(s, match).map(csvEscape).join(','));
-        });
-        return lines.join('\n');
-    }
-    function downloadCsv(filename, content) {
-        const bom = String.fromCharCode(0xFEFF); // BOM so Excel reads UTF-8 correctly
-        const blob = new Blob([bom + content], { type: 'text/csv;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => {
-            try { document.body.removeChild(a); } catch (e) {}
-            URL.revokeObjectURL(url);
-        }, 100);
-    }
-    function safeFilenamePart(s) {
-        return String(s || '').replace(/[\/\\?%*:|"<>]/g, '_').slice(0, 40);
-    }
+    // ── CSV export (low-level utils in HA.csv) ──
     function exportMatchCsv(match) {
         if (!match.shots || match.shots.length === 0) {
             showToast('⚠ シュート記録がありません'); return;
         }
-        const filename = `handball_${safeFilenamePart(match.date || 'undated')}_${safeFilenamePart(match.opponent || 'match')}.csv`;
-        downloadCsv(filename, matchToCsv(match));
+        const filename = `handball_${HA.csv.safeFilenamePart(match.date || 'undated')}_${HA.csv.safeFilenamePart(match.opponent || 'match')}.csv`;
+        HA.csv.download(filename, HA.csv.matchToCsv(match));
         showToast('📥 CSV保存しました');
     }
     ui_settings.btnExportCurrent.addEventListener('click', () => {
@@ -1675,19 +1569,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ── History modal ──
-    function computeMatchQuickStats(match) {
-        let attShots = 0, attGoals = 0, attTO = 0;
-        (match.shots || []).forEach(s => {
-            if (s.mode === 'attack') {
-                if (s.result === 'turnover') attTO++;
-                else attShots++;
-                if (s.result === 'goal') attGoals++;
-            }
-        });
-        const denom = attShots + attTO;
-        const attackEfficiency = denom === 0 ? 0 : Math.round((attGoals / denom) * 100);
-        return { attShots, attGoals, attTO, attackEfficiency };
-    }
+    const computeMatchQuickStats = HA.stats.computeMatchQuickStats;
     function renderHistoryList() {
         const history = loadHistory();
         ui_hist.list.innerHTML = '';
@@ -1740,14 +1622,8 @@ document.addEventListener('DOMContentLoaded', () => {
     ui_hist.btnExportAll.addEventListener('click', () => {
         const history = loadHistory();
         if (history.length === 0) { showToast('⚠ 履歴がありません'); return; }
-        const lines = [CSV_HEADERS.map(csvEscape).join(',')];
-        history.forEach(match => {
-            (match.shots || []).forEach(s => {
-                lines.push(shotToCsvRow(s, match).map(csvEscape).join(','));
-            });
-        });
         const filename = `handball_all_${new Date().toISOString().slice(0,10)}.csv`;
-        downloadCsv(filename, lines.join('\n'));
+        HA.csv.download(filename, HA.csv.matchesToCsv(history));
         showToast('📥 全試合CSV保存');
     });
 

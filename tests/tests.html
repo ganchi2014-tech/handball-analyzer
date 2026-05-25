@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Handball Analyzer — Tests</title>
+    <style>
+        body {
+            font-family: -apple-system, sans-serif;
+            background: #1b2230;
+            color: #fff;
+            padding: 20px;
+            margin: 0;
+        }
+        h1 { margin-top: 0; }
+        .summary {
+            padding: 14px 18px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            margin-bottom: 18px;
+        }
+        .summary.pass { background: rgba(46, 204, 113, 0.3); border: 1px solid #2ecc71; }
+        .summary.fail { background: rgba(231, 76, 60, 0.3); border: 1px solid #e74c3c; }
+        .summary .ok { color: #2ecc71; font-weight: 700; }
+        .summary .ng { color: #ff7466; font-weight: 700; }
+        .suite {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+        .suite-title {
+            padding: 10px 14px;
+            font-weight: 700;
+            background: rgba(255,255,255,0.06);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            font-size: 0.95rem;
+        }
+        .test-row {
+            padding: 6px 14px;
+            font-size: 0.9rem;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .test-row .status {
+            display: inline-block;
+            width: 18px;
+            font-weight: 700;
+        }
+        .test-row.pass { color: #d4f5dd; }
+        .test-row.pass .status { color: #2ecc71; }
+        .test-row.fail { color: #ffd4d4; }
+        .test-row.fail .status { color: #e74c3c; }
+        .test-row .error {
+            margin-left: 24px;
+            font-size: 0.8rem;
+            color: #ffa0a0;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        button {
+            background: #3498db;
+            color: #fff;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 6px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>Handball Analyzer — Tests</h1>
+    <div id="test-summary" class="summary">読み込み中...</div>
+    <button onclick="__runTests()">再実行</button>
+    <div id="test-results" style="margin-top:18px;"></div>
+
+    <!-- Load libs to test -->
+    <script src="../lib/roster.js"></script>
+    <script src="../lib/stats.js"></script>
+    <script src="../lib/csv.js"></script>
+
+    <!-- Test runner -->
+    <script src="runner.js"></script>
+
+    <!-- Test suites -->
+    <script src="stats.test.js"></script>
+    <script src="roster.test.js"></script>
+    <script src="csv.test.js"></script>
+
+    <!-- Auto-run on load -->
+    <script>
+        document.addEventListener('DOMContentLoaded', __runTests);
+    </script>
+</body>
+</html>

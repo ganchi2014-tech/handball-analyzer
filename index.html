@@ -12,7 +12,7 @@
     <meta name="application-name" content="ハンド分析">
     
     <title>Handball Analyzer</title>
-    <link rel="stylesheet" href="styles.css?v=17">
+    <link rel="stylesheet" href="styles.css?v=18">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -47,6 +47,14 @@
         <div class="gk-toggle" id="gk-toggle-container">
             <span class="gk-label">GK:</span>
             <!-- buttons populated by JS from roster -->
+        </div>
+
+        <!-- 出場メンバー（ホーム画面から直接編集できるチップ） -->
+        <div class="lineup-bar">
+            <button type="button" id="btn-home-lineup" class="lineup-chip">
+                👥 出場 <span id="home-lineup-count">0/6</span>
+                <span class="lineup-chip-edit">編集</span>
+            </button>
         </div>
 
         <!-- Mode Toggle -->
@@ -425,9 +433,10 @@
             </div>
 
             <div class="summary-actions" style="margin-top: 15px;">
+                <button type="button" class="btn-action" id="btn-summary-submit" style="background:var(--success); width:100%; padding: 14px; border:none; color:#fff; font-weight:bold; border-radius:8px; margin-bottom:8px;">📨 教師に送信</button>
                 <div style="display:flex; gap:10px; margin-bottom:8px;">
-                    <button type="button" class="btn-action" id="btn-summary-submit" style="background:var(--success); flex:1; padding: 14px; border:none; color:#fff; font-weight:bold; border-radius:8px;">📨 教師に送信</button>
-                    <button type="button" class="btn-action" id="btn-summary-finish" style="background:rgba(155,89,182,0.4); border:1px solid rgba(155,89,182,0.7); flex:1; padding: 14px; color:#fff; font-weight:bold; border-radius:8px;">🏁 履歴保存→新規</button>
+                    <button type="button" class="btn-action" id="btn-summary-archive" style="background:rgba(155,89,182,0.4); border:1px solid rgba(155,89,182,0.7); flex:1; padding: 14px; color:#fff; font-weight:bold; border-radius:8px;">📚 履歴に保存</button>
+                    <button type="button" class="btn-action" id="btn-summary-reset" style="background:rgba(231,76,60,0.3); border:1px solid rgba(231,76,60,0.6); flex:1; padding: 14px; color:#fff; font-weight:bold; border-radius:8px;">🔄 新規試合</button>
                 </div>
                 <div style="display:flex; gap:10px;" class="modal-buttons">
                     <button class="btn-action" id="btn-download-img" style="background:#3498db; flex:1; padding: 12px; border:none;">📸 画像として保存</button>
@@ -453,6 +462,6 @@
     <script src="lib/roster.js?v=15"></script>
     <script src="lib/stats.js?v=15"></script>
     <script src="lib/csv.js?v=15"></script>
-    <script src="app.js?v=22"></script>
+    <script src="app.js?v=23"></script>
 </body>
 </html>

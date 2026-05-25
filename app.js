@@ -252,6 +252,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     renderGkRow();
 
+    // ── Home-screen lineup chip ──
+    const btnHomeLineup = document.getElementById('btn-home-lineup');
+    const homeLineupCount = document.getElementById('home-lineup-count');
+    function updateHomeLineupCount() {
+        if (!homeLineupCount) return;
+        const n = state.lineup ? state.lineup.length : 0;
+        homeLineupCount.textContent = `${n}/${LINEUP_MAX}`;
+        if (btnHomeLineup) {
+            btnHomeLineup.classList.toggle('empty', n === 0);
+        }
+    }
+    if (btnHomeLineup) {
+        btnHomeLineup.addEventListener('click', () => {
+            openLineupModal();
+        });
+    }
+
     function createPlayerBtn(pos, onClick) {
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -336,6 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
         saveState();
         renderLineupModal();
         populatePlayerStep();
+        updateHomeLineupCount();
         showToast(`⬇ ${p.replace(/^[①②③]/, '')} ベンチへ`);
     }
 
@@ -350,6 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
         saveState();
         renderLineupModal();
         populatePlayerStep();
+        updateHomeLineupCount();
         showToast(`⬆ ${p.replace(/^[①②③]/, '')} 出場へ`);
     }
 
@@ -883,9 +902,10 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.summaryModal.classList.remove('hidden');
     });
 
-    // ── Summary modal action buttons (submit + finish) ──
-    const btnSummarySubmit = document.getElementById('btn-summary-submit');
-    const btnSummaryFinish = document.getElementById('btn-summary-finish');
+    // ── Summary modal action buttons ──
+    const btnSummarySubmit  = document.getElementById('btn-summary-submit');
+    const btnSummaryArchive = document.getElementById('btn-summary-archive');
+    const btnSummaryReset   = document.getElementById('btn-summary-reset');
     if (btnSummarySubmit) {
         btnSummarySubmit.addEventListener('click', () => {
             const match = state.viewMatch || {
@@ -896,17 +916,26 @@ document.addEventListener('DOMContentLoaded', () => {
             submitMatchToTeacher(match);
         });
     }
-    if (btnSummaryFinish) {
-        btnSummaryFinish.addEventListener('click', () => {
+    if (btnSummaryArchive) {
+        btnSummaryArchive.addEventListener('click', () => {
             if (state.shots.length === 0) {
                 showToast('⚠ 記録されたシュートがありません');
                 return;
             }
-            if (!confirm(`現在の試合（${state.shots.length} 件）を履歴に保存して新規試合を開始します。\nよろしいですか？`)) return;
             const m = archiveCurrentMatch();
-            clearCurrentMatch();
             updateHistoryCount();
-            showToast(`✅ 「${m.date} vs ${m.opponent || '対戦相手'}」を保存`);
+            showToast(`📚 「${m.date} vs ${m.opponent || '対戦相手'}」を履歴に保存`);
+        });
+    }
+    if (btnSummaryReset) {
+        btnSummaryReset.addEventListener('click', () => {
+            if (state.shots.length === 0) {
+                showToast('⚠ 既に新規状態です');
+                return;
+            }
+            if (!confirm(`現在の試合データを消去して新規試合を開始します。\n（履歴は影響を受けません）\nよろしいですか？`)) return;
+            clearCurrentMatch();
+            showToast('🔄 新規試合を開始しました');
             window.closeSummaryModal();
         });
     }
@@ -933,9 +962,11 @@ document.addEventListener('DOMContentLoaded', () => {
             : (ui.dateInput.value || '日付未設定');
         const prefix = state.viewMatch ? '📚 履歴 — ' : '';
         document.getElementById('summary-match-info').textContent = `${prefix}${dateStr} VS ${opponent}`;
-        // Historical view: hide "履歴保存→新規" (already archived)
-        const finishBtn = document.getElementById('btn-summary-finish');
-        if (finishBtn) finishBtn.style.display = state.viewMatch ? 'none' : '';
+        // Historical view: hide archive/reset (they only apply to current match)
+        const arcBtn = document.getElementById('btn-summary-archive');
+        const rstBtn = document.getElementById('btn-summary-reset');
+        if (arcBtn) arcBtn.style.display = state.viewMatch ? 'none' : '';
+        if (rstBtn) rstBtn.style.display = state.viewMatch ? 'none' : '';
 
         // ── A1 + A3: 詳細なスタッツ集計 ──
         let attTotal = 0, attShots = 0, attGoals = 0, attTurnovers = 0;
@@ -1361,6 +1392,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderRosterEditor();
                 renderGkRow();
                 populatePlayerStep();
+                updateHomeLineupCount();
             });
             ui_settings.rosterList.appendChild(row);
         });
@@ -1841,6 +1873,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Restore saved data on load ──
     const hadData = loadState();
+    updateHomeLineupCount();
     if (hadData) {
         // Slight delay so the toast appears after initial render
         setTimeout(() => showToast('🔄 前回のデータを復元しました'), 200);

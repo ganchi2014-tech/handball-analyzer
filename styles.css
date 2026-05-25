@@ -259,11 +259,60 @@ body {
     font-weight: bold;
     color: #111;
 }
-.plot-goal { background-color: var(--success); }
-.plot-save { background-color: var(--save); }
-.plot-miss { background-color: var(--miss); }
+/* ── Result encoding: color + shape + border style ──
+   so the four results stay distinguishable without color (色覚多様性対応) */
+
+/* Attack goal: solid CIRCLE in green */
+.plot-goal {
+    background-color: var(--success);
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.85);
+}
+
+/* Save: solid SQUARE in yellow */
+.plot-save {
+    background-color: var(--save);
+    border-radius: 3px;
+    border: 1.5px solid rgba(255,255,255,0.85);
+}
+
+/* Miss: HOLLOW circle with dashed border (no fill) */
+.plot-miss {
+    background-color: transparent;
+    border: 2.5px dashed rgba(255,255,255,0.9);
+    border-radius: 50%;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+
+/* Defense goal: red circle with × overlay via ::before */
 #app.defense-mode .plot-point.plot-goal,
-.plot-point.mode-defense.plot-goal { background-color: var(--defense-primary); }
+.plot-point.mode-defense.plot-goal {
+    background-color: var(--defense-primary);
+    border: 1.5px solid rgba(255,255,255,0.85);
+    border-radius: 50%;
+    position: relative;
+}
+.plot-point.mode-defense.plot-goal::before,
+#app.defense-mode .plot-point.plot-goal::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 70%; height: 2px;
+    background: #fff;
+    transform: translate(-50%, -50%) rotate(45deg);
+    pointer-events: none;
+}
+.plot-point.mode-defense.plot-goal::after,
+#app.defense-mode .plot-point.plot-goal::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 70%; height: 2px;
+    background: #fff;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    pointer-events: none;
+}
 
 @keyframes popIn { to { transform: scale(1); } }
 

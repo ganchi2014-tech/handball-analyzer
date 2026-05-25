@@ -39,7 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
         rsFilter: 'all',
         lineup: [],            // 出場中の選手名（最大6名、GKを除く）
         period: 1,             // 1=前半, 2=後半
-        inputMode: 'swipe'     // 'swipe' or 'modal'
+        inputMode: 'swipe',    // 'swipe' or 'modal'
+        viewMatch: null        // 履歴詳細を表示中なら match オブジェクト、現在試合なら null
     };
 
     const LINEUP_MAX = 6;
@@ -712,6 +713,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.closeSummaryModal = function() {
         ui.summaryModal.classList.add('hidden');
+        state.viewMatch = null;
     }
 
     document.querySelectorAll('#step-result .action-btn').forEach(btn => {
@@ -891,11 +893,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    function generateSummary() {
-        // 対戦相手と日付をモーダルにセット
-        const opponent = ui.opponentInput.value || '対戦相手未入力';
-        const dateStr = ui.dateInput.value || '日付未設定';
-        document.getElementById('summary-match-info').textContent = `${dateStr} VS ${opponent}`;
+    function generateSummary(viewMatch) {
+        // view mode toggle (used by renderRunningScore too)
+        state.viewMatch = viewMatch || null;
+        const shotsData = state.viewMatch ? (state.viewMatch.shots || []) : state.shots;
+        const opponent = state.viewMatch
+            ? (state.viewMatch.opponent || '対戦相手未入力')
+            : (ui.opponentInput.value || '対戦相手未入力');
+        const dateStr = state.viewMatch
+            ? (state.viewMatch.date || '日付未設定')
+            : (ui.dateInput.value || '日付未設定');
+        const prefix = state.viewMatch ? '📚 履歴 — ' : '';
+        document.getElementById('summary-match-info').textContent = `${prefix}${dateStr} VS ${opponent}`;
 
         // ── A1 + A3: 詳細なスタッツ集計 ──
         let attTotal = 0, attShots = 0, attGoals = 0, attTurnovers = 0;
@@ -903,7 +912,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const playerStats = {};
         const gkStats = {};
 
-        state.shots.forEach(s => {
+        shotsData.forEach(s => {
             if (s.mode === 'attack') {
                 attTotal++;
                 if (s.result === 'turnover') {
@@ -979,7 +988,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const svgDef = baseSvg.cloneNode(true);
         miniDef.appendChild(svgDef);
 
-        const orderedShots = [...state.shots].sort((a,b) => (a.time || 0) - (b.time || 0));
+        const orderedShots = [...shotsData].sort((a,b) => (a.time || 0) - (b.time || 0));
 
         orderedShots.forEach(s => {
             if (s.result === 'turnover') return;
@@ -1015,7 +1024,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // ── 前半 / 後半 ブレイクダウン ──
         if (ui.periodBreakdown) {
-            const halves = HA.stats.aggregateByPeriod(state.shots);
+            const halves = HA.stats.aggregateByPeriod(shotsData);
             const fmt = (h) => `${h.us} - ${h.opp}　<span style="color:#888; font-size:0.85em;">(ST ${h.attShots} / TO ${h.attTO})</span>`;
             ui.periodBreakdown.innerHTML =
                 `<div style="margin-bottom:4px;"><strong style="color:var(--primary);">前半</strong>: ${fmt(halves[1])}</div>` +
@@ -1029,7 +1038,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 fast: { label: '速攻',    color: 'var(--success)' },
                 '7m': { label: '7m',      color: 'var(--save)' }
             };
-            const { types, untagged } = HA.stats.aggregateByAttackType(state.shots);
+            const { types, untagged } = HA.stats.aggregateByAttackType(shotsData);
             const cells = Object.entries(labels).map(([key, meta]) => {
                 const t = types[key];
                 const rate = t.shots === 0 ? '-' : `${Math.round((t.goals/t.shots)*100)}%`;
@@ -1041,7 +1050,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // ── コース別ブレイクダウン ──
         if (ui.courseBreakdown) {
-            const { zones, off, def } = HA.stats.aggregateByCourse(state.shots);
+            const { zones, off, def } = HA.stats.aggregateByCourse(shotsData);
             const renderGrid = (data, title, color, modeLabel) => {
                 const cells = zones.map(z => {
                     const tot = data[z].g + data[z].s;
@@ -1069,7 +1078,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 passive: '⏱️ パッシブ',
                 other: '❓ その他'
             };
-            const { off: offReasons, def: defReasons, offUnk, defUnk } = HA.stats.aggregateTurnoverReasons(state.shots);
+            const { off: offReasons, def: defReasons, offUnk, defUnk } = HA.stats.aggregateTurnoverReasons(shotsData);
             function reasonsRow(bucket, unk, label, color) {
                 const parts = Object.keys(reasonLabels)
                     .filter(k => bucket[k])
@@ -1119,8 +1128,8 @@ document.addEventListener('DOMContentLoaded', () => {
         rsContainer.innerHTML = '';
         let sUs = 0;
         let sOpp = 0;
-
-        const orderedShots = [...state.shots].sort((a,b) => (a.time || 0) - (b.time || 0));
+        const shotsData = state.viewMatch ? (state.viewMatch.shots || []) : state.shots;
+        const orderedShots = [...shotsData].sort((a,b) => (a.time || 0) - (b.time || 0));
 
         orderedShots.forEach(s => {
             const t = s.time || 0;
@@ -1643,10 +1652,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     ST: ${stats.attShots} / TO: ${stats.attTO} / 攻撃効率: ${stats.attackEfficiency}%
                 </div>
                 <div class="history-row-actions">
+                    <button type="button" class="btn-secondary-mini" data-action="view">📊 詳細</button>
                     <button type="button" class="btn-secondary-mini" data-action="csv">📥 CSV</button>
                     <button type="button" class="btn-secondary-mini delete" data-action="delete">🗑 削除</button>
                 </div>
             `;
+            row.querySelector('[data-action="view"]').addEventListener('click', () => {
+                window.closeHistoryModal();
+                window.closeSettingsModal();
+                generateSummary(match);
+                ui.summaryModal.classList.remove('hidden');
+            });
             row.querySelector('[data-action="csv"]').addEventListener('click', () => exportMatchCsv(match));
             row.querySelector('[data-action="delete"]').addEventListener('click', () => {
                 if (!confirm(`この試合（${match.date} vs ${match.opponent}）を履歴から削除しますか？`)) return;

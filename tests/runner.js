@@ -64,13 +64,15 @@
         };
     }
 
-    function runAll() {
+    async function runAll() {
         const out = document.getElementById('test-results');
         const summary = document.getElementById('test-summary');
         out.innerHTML = '';
         state.results = { passed: 0, failed: 0, errors: [] };
+        summary.className = 'summary';
+        summary.textContent = '実行中...';
 
-        state.suites.forEach(suite => {
+        for (const suite of state.suites) {
             const suiteDiv = document.createElement('div');
             suiteDiv.className = 'suite';
             const title = document.createElement('div');
@@ -78,11 +80,15 @@
             title.textContent = suite.name;
             suiteDiv.appendChild(title);
 
-            suite.tests.forEach(t => {
+            for (const t of suite.tests) {
                 const row = document.createElement('div');
                 row.className = 'test-row';
                 try {
-                    t.fn();
+                    const result = t.fn();
+                    // Support async tests (function returns a Promise)
+                    if (result && typeof result.then === 'function') {
+                        await result;
+                    }
                     row.classList.add('pass');
                     row.innerHTML = `<span class="status">✓</span> ${t.name}`;
                     state.results.passed++;
@@ -93,9 +99,9 @@
                     state.results.errors.push({ suite: suite.name, name: t.name, error: e });
                 }
                 suiteDiv.appendChild(row);
-            });
+            }
             out.appendChild(suiteDiv);
-        });
+        }
 
         const total = state.results.passed + state.results.failed;
         summary.className = state.results.failed === 0 ? 'summary pass' : 'summary fail';

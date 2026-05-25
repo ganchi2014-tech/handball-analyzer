@@ -226,7 +226,7 @@
 
             <div class="settings-section">
                 <h4>データ管理</h4>
-                <button type="button" id="btn-export-current-csv" class="btn-secondary">📥 現在試合をCSV保存</button>
+                <button type="button" id="btn-export-current-csv" class="btn-secondary">📤 現在試合のCSV（共有/保存）</button>
                 <button type="button" id="btn-open-history" class="btn-secondary">📚 試合履歴 (<span id="history-count">0</span>)</button>
                 <button type="button" id="btn-finish-match" class="btn-secondary" style="border-color: var(--success); color: #d4f5dd;">🏁 試合を履歴に保存して新規開始</button>
             </div>
@@ -293,7 +293,7 @@
             <h3>試合履歴</h3>
             <div id="history-empty" class="history-empty hidden">まだ保存された試合はありません</div>
             <div id="history-list-container" class="history-list"></div>
-            <button type="button" id="btn-export-all-csv" class="btn-secondary">📥 全試合まとめてCSV</button>
+            <button type="button" id="btn-export-all-csv" class="btn-secondary">📤 全試合まとめてCSV（共有/保存）</button>
             <button class="btn-cancel" onclick="closeHistoryModal()">閉じる</button>
         </div>
     </div>
@@ -425,9 +425,9 @@
         </div>
     </div>
 
-    <script src="lib/roster.js?v=14"></script>
-    <script src="lib/stats.js?v=14"></script>
-    <script src="lib/csv.js?v=14"></script>
-    <script src="app.js?v=17"></script>
+    <script src="lib/roster.js?v=15"></script>
+    <script src="lib/stats.js?v=15"></script>
+    <script src="lib/csv.js?v=15"></script>
+    <script src="app.js?v=18"></script>
 </body>
 </html>

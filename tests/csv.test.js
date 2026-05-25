@@ -91,6 +91,46 @@ describe('HA.csv.matchesToCsv', () => {
     });
 });
 
+describe('HA.csv.shareOrDownload (fallback path)', () => {
+    test('returns "downloaded" when navigator.canShare is unavailable', async () => {
+        const origCanShare = navigator.canShare;
+        const origCreate = URL.createObjectURL;
+        const origRevoke = URL.revokeObjectURL;
+        const origAClick = HTMLAnchorElement.prototype.click;
+        // Force fallback: stub canShare to undefined
+        delete navigator.canShare;
+        URL.createObjectURL = () => 'blob:test';
+        URL.revokeObjectURL = () => {};
+        HTMLAnchorElement.prototype.click = function () {};
+        try {
+            const result = await HA.csv.shareOrDownload('test.csv', 'a,b\n1,2');
+            expect(result).toBe('downloaded');
+        } finally {
+            if (origCanShare) navigator.canShare = origCanShare;
+            URL.createObjectURL = origCreate;
+            URL.revokeObjectURL = origRevoke;
+            HTMLAnchorElement.prototype.click = origAClick;
+        }
+    });
+    test('returns "downloaded" when canShare returns false', async () => {
+        const origCanShare = navigator.canShare;
+        const origCreate = URL.createObjectURL;
+        const origAClick = HTMLAnchorElement.prototype.click;
+        navigator.canShare = () => false;
+        URL.createObjectURL = () => 'blob:test';
+        HTMLAnchorElement.prototype.click = function () {};
+        try {
+            const result = await HA.csv.shareOrDownload('test.csv', 'a,b\n1,2');
+            expect(result).toBe('downloaded');
+        } finally {
+            if (origCanShare) navigator.canShare = origCanShare;
+            else delete navigator.canShare;
+            URL.createObjectURL = origCreate;
+            HTMLAnchorElement.prototype.click = origAClick;
+        }
+    });
+});
+
 describe('HA.csv.safeFilenamePart', () => {
     test('strips problematic chars', () => {
         expect(HA.csv.safeFilenamePart('a/b\\c?d*e:f|g"h<i>j%k')).toBe('a_b_c_d_e_f_g_h_i_j_k');

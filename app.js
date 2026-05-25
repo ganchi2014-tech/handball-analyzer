@@ -1610,13 +1610,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ── CSV export (low-level utils in HA.csv) ──
-    function exportMatchCsv(match) {
+    async function exportMatchCsv(match) {
         if (!match.shots || match.shots.length === 0) {
             showToast('⚠ シュート記録がありません'); return;
         }
         const filename = `handball_${HA.csv.safeFilenamePart(match.date || 'undated')}_${HA.csv.safeFilenamePart(match.opponent || 'match')}.csv`;
-        HA.csv.download(filename, HA.csv.matchToCsv(match));
-        showToast('📥 CSV保存しました');
+        const outcome = await HA.csv.shareOrDownload(filename, HA.csv.matchToCsv(match));
+        if (outcome === 'shared') showToast('📤 共有しました');
+        else if (outcome === 'downloaded') showToast('📥 ダウンロードしました');
+        // 'aborted' → silent
     }
     ui_settings.btnExportCurrent.addEventListener('click', () => {
         exportMatchCsv({
@@ -1653,7 +1655,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="history-row-actions">
                     <button type="button" class="btn-secondary-mini" data-action="view">📊 詳細</button>
-                    <button type="button" class="btn-secondary-mini" data-action="csv">📥 CSV</button>
+                    <button type="button" class="btn-secondary-mini" data-action="csv">📤 CSV</button>
                     <button type="button" class="btn-secondary-mini delete" data-action="delete">🗑 削除</button>
                 </div>
             `;
@@ -1684,12 +1686,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     ui_hist.btnOpen.addEventListener('click', openHistoryModal);
 
-    ui_hist.btnExportAll.addEventListener('click', () => {
+    ui_hist.btnExportAll.addEventListener('click', async () => {
         const history = loadHistory();
         if (history.length === 0) { showToast('⚠ 履歴がありません'); return; }
         const filename = `handball_all_${new Date().toISOString().slice(0,10)}.csv`;
-        HA.csv.download(filename, HA.csv.matchesToCsv(history));
-        showToast('📥 全試合CSV保存');
+        const outcome = await HA.csv.shareOrDownload(filename, HA.csv.matchesToCsv(history));
+        if (outcome === 'shared') showToast('📤 共有しました');
+        else if (outcome === 'downloaded') showToast('📥 ダウンロードしました');
     });
 
     attachSwipeDownClose(ui_hist.modal, () => window.closeHistoryModal());

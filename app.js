@@ -493,8 +493,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ── Court interactions (swipe or tap to record) ──
+    // ── Court interactions (swipe / tap / long-press) ──
     let pointerStart = null;
+    let courtLongPressTimer = null;
+    const COURT_LONG_PRESS_MS = 600;
+    const COURT_LONG_PRESS_MOVE_CANCEL = 10;
 
     function getEventCoords(e, phase) {
         if (phase === 'end' && e.changedTouches && e.changedTouches[0]) {
@@ -511,9 +514,51 @@ document.addEventListener('DOMContentLoaded', () => {
         const c = getEventCoords(e, 'start');
         if (c.x == null || c.y == null) return;
         pointerStart = c;
+        // Start long-press timer → TO at this position
+        if (courtLongPressTimer) clearTimeout(courtLongPressTimer);
+        courtLongPressTimer = setTimeout(() => {
+            courtLongPressTimer = null;
+            if (!pointerStart) return;
+            triggerToAtCourt(pointerStart);
+            pointerStart = null; // consume — onCourtUp will short-circuit
+            hideSwipeHint();
+        }, COURT_LONG_PRESS_MS);
+    }
+
+    function clearCourtLongPress() {
+        if (courtLongPressTimer) {
+            clearTimeout(courtLongPressTimer);
+            courtLongPressTimer = null;
+        }
+    }
+
+    function triggerToAtCourt(startCoords) {
+        const rect = ui.courtContainer.getBoundingClientRect();
+        const xPct = ((startCoords.x - rect.left) / rect.width) * 100;
+        const yPct = ((startCoords.y - rect.top) / rect.height) * 100;
+        if (xPct < 0 || xPct > 100 || yPct < 0 || yPct > 100) return;
+        state.currentDraftShot = {
+            id: Date.now(),
+            x: xPct, y: yPct,
+            mode: state.mode,
+            result: 'turnover',
+            player: null,
+            time: state.timer.seconds,
+            gk: state.currentGk,
+            period: state.period,
+            attackType: 'set',
+            toReason: null
+        };
+        ui.modal.classList.remove('hidden');
+        ui.stepResult.classList.add('hidden');
+        ui.stepCourse.classList.add('hidden');
+        ui.stepPlayer.classList.add('hidden');
+        ui.stepToReason.classList.remove('hidden');
+        resetAttackChips('set');
     }
 
     function onCourtUp(e) {
+        clearCourtLongPress();
         if (!pointerStart) return;
         if (e.type === 'touchend') e.preventDefault();
         const c = getEventCoords(e, 'end');
@@ -565,6 +610,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function onCourtCancel() {
+        clearCourtLongPress();
         pointerStart = null;
         hideSwipeHint();
     }
@@ -580,12 +626,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function onCourtMove(e) {
         if (!pointerStart) return;
-        if (state.inputMode !== 'swipe') return;
         const c = getEventCoords(e, 'move');
         if (c.x == null || c.y == null) return;
         const dx = c.x - pointerStart.x;
         const dy = c.y - pointerStart.y;
         const dist = Math.hypot(dx, dy);
+        // Significant movement cancels the long-press TO trigger
+        if (dist > COURT_LONG_PRESS_MOVE_CANCEL) clearCourtLongPress();
+        if (state.inputMode !== 'swipe') return;
         if (dist < SWIPE_THRESHOLD_PX) {
             hideSwipeHint();
             return;
@@ -614,8 +662,8 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.inputModeChip.textContent = state.inputMode === 'swipe' ? '👆 スワイプ入力' : '📋 タップ入力';
         if (ui.instructionText) {
             ui.instructionText.textContent = state.inputMode === 'swipe'
-                ? '↑ゴール / ←→セーブ / ↓ミス　（タップで詳細）'
-                : 'コートをタップしてシュートを記録';
+                ? '↑ゴール / ←→セーブ / ↓ミス / 長押しでTO'
+                : 'タップでシュート / 長押しでTO';
         }
     }
 
@@ -753,7 +801,8 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.plotsContainer.innerHTML = '';
         state.shots.forEach(shot => {
             if (shot.mode !== state.mode) return;
-            if (shot.result === 'turnover') return;
+            // Skip turnovers without position (recorded via the legacy TO button)
+            if (shot.result === 'turnover' && shot.x == null) return;
 
             const el = document.createElement('div');
             el.className = `plot-point plot-${shot.result} mode-${shot.mode}`;

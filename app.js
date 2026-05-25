@@ -8,7 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
         currentGk: '桑原',
         rsFilter: 'all',
         lineup: [],            // 出場中の選手名（最大6名、GKを除く）
-        lineupEditTemp: []     // 編集モーダルの一時状態
+        lineupEditTemp: [],    // 編集モーダルの一時状態
+        period: 1              // 1=前半, 2=後半
     };
 
     const LINEUP_MAX = 6;
@@ -39,6 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
         btnSkipPlayer: document.getElementById('btn-skip-player'),
         timeDisplay: document.getElementById('time-display'),
         timerToggle: document.getElementById('timer-toggle'),
+        periodToggle: document.getElementById('period-toggle'),
+        periodBreakdown: document.getElementById('period-breakdown'),
         scoreUs: document.getElementById('score-us'),
         scoreOpponent: document.getElementById('score-opponent'),
         statAttackEfficiency: document.getElementById('stat-attack-efficiency'),
@@ -84,6 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 mode: state.mode,
                 currentGk: state.currentGk,
                 lineup: state.lineup,
+                period: state.period,
                 matchDate: ui.dateInput.value,
                 matchOpponent: ui.opponentInput.value,
                 savedAt: Date.now()
@@ -109,6 +113,8 @@ document.addEventListener('DOMContentLoaded', () => {
             state.mode = snap.mode === 'defense' ? 'defense' : 'attack';
             state.currentGk = snap.currentGk || state.currentGk;
             state.lineup = Array.isArray(snap.lineup) ? snap.lineup.filter(p => playerPositions.includes(p)) : [];
+            state.period = (snap.period === 2) ? 2 : 1;
+            applyPeriodToUI();
 
             if (snap.matchDate) ui.dateInput.value = snap.matchDate;
             if (snap.matchOpponent) ui.opponentInput.value = snap.matchOpponent;
@@ -319,6 +325,19 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.timeDisplay.textContent = `${m}:${s}`;
     }
 
+    // ── Period (前半/後半) toggle ──
+    function applyPeriodToUI() {
+        ui.periodToggle.textContent = state.period === 2 ? '後半' : '前半';
+        ui.periodToggle.setAttribute('data-period', String(state.period));
+    }
+
+    ui.periodToggle.addEventListener('click', () => {
+        state.period = state.period === 1 ? 2 : 1;
+        applyPeriodToUI();
+        saveState();
+        showToast(state.period === 2 ? '🟣 後半に切替' : '🔵 前半に切替');
+    });
+
     // ── B1: Toast notification ──
     function showToast(message) {
         ui.toast.textContent = message;
@@ -340,7 +359,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 result: 'turnover',
                 player: null,
                 time: state.timer.seconds,
-                gk: state.currentGk
+                gk: state.currentGk,
+                period: state.period
             };
             if (state.mode === 'defense') {
                 // ディフェンスモード：相手チームなので選手選択不要、即記録
@@ -389,7 +409,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const x = ((clientX - rect.left) / rect.width) * 100;
         const y = ((clientY - rect.top) / rect.height) * 100;
 
-        state.currentDraftShot = { id: Date.now(), x, y, mode: state.mode, result: null, player: null, time: state.timer.seconds, gk: state.currentGk };
+        state.currentDraftShot = { id: Date.now(), x, y, mode: state.mode, result: null, player: null, time: state.timer.seconds, gk: state.currentGk, period: state.period };
         openModal();
     }
 
@@ -665,6 +685,26 @@ document.addEventListener('DOMContentLoaded', () => {
             ui.gkIndividualStats.innerHTML += `<div>・${gk}: セーブ ${st.saves}/${st.shots} (${rate}%)</div>`;
         });
 
+        // ── 前半 / 後半 ブレイクダウン ──
+        if (ui.periodBreakdown) {
+            const halves = { 1: { us: 0, opp: 0, attShots: 0, attTO: 0 },
+                             2: { us: 0, opp: 0, attShots: 0, attTO: 0 } };
+            state.shots.forEach(s => {
+                const p = s.period === 2 ? 2 : 1;
+                if (s.mode === 'attack') {
+                    if (s.result === 'goal') halves[p].us++;
+                    if (s.result === 'turnover') halves[p].attTO++;
+                    else halves[p].attShots++;
+                } else {
+                    if (s.result === 'goal') halves[p].opp++;
+                }
+            });
+            const fmt = (h) => `${h.us} - ${h.opp}　<span style="color:#888; font-size:0.85em;">(ST ${h.attShots} / TO ${h.attTO})</span>`;
+            ui.periodBreakdown.innerHTML =
+                `<div style="margin-bottom:4px;"><strong style="color:var(--primary);">前半</strong>: ${fmt(halves[1])}</div>` +
+                `<div><strong style="color:#9b59b6;">後半</strong>: ${fmt(halves[2])}</div>`;
+        }
+
         // ── C2: 選手別テーブル（シュート数列追加） ──
         ui.summaryTbody.innerHTML = '';
         Object.keys(playerStats).sort((a,b) => {
@@ -820,6 +860,8 @@ document.addEventListener('DOMContentLoaded', () => {
             state.score = {us:0, opponent:0};
             clearInterval(state.timer.interval);
             state.timer = { running: false, seconds: 0, interval: null };
+            state.period = 1;
+            applyPeriodToUI();
             ui.timerToggle.textContent = '▶';
             updateTimer();
             updateScoreDOM();

@@ -12,7 +12,7 @@
     <meta name="application-name" content="ハンド分析">
     
     <title>Handball Analyzer</title>
-    <link rel="stylesheet" href="styles.css?v=12">
+    <link rel="stylesheet" href="styles.css?v=14">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -87,6 +87,9 @@
             <div id="court-instruction" class="instruction-overlay">
                 <span id="instruction-text">↑ゴール / ←→セーブ / ↓ミス　（タップで詳細）</span>
             </div>
+
+            <!-- Swipe direction hint (shows during drag) -->
+            <div id="swipe-hint" class="swipe-hint hidden"></div>
         </div>
 
         <!-- Dashboard -->
@@ -232,6 +235,57 @@
         </div>
     </div>
 
+    <!-- Edit Shot Modal -->
+    <div id="edit-shot-modal" class="modal-overlay hidden" style="z-index:180;">
+        <div class="modal-content">
+            <div class="modal-drag-handle"></div>
+            <h3 id="edit-shot-title">シュート編集</h3>
+            <div id="edit-shot-meta" class="edit-meta"></div>
+
+            <div class="edit-section">
+                <div class="edit-label">結果</div>
+                <div class="edit-result-row" id="edit-result-row">
+                    <button type="button" class="edit-result-btn" data-result="goal">🟢 ゴール</button>
+                    <button type="button" class="edit-result-btn" data-result="save">🟡 セーブ</button>
+                    <button type="button" class="edit-result-btn" data-result="miss">⚪ ミス</button>
+                </div>
+            </div>
+
+            <div class="edit-section">
+                <div class="edit-label">攻撃種別</div>
+                <div class="attack-type-row" id="edit-attack-type-row">
+                    <button type="button" class="atk-chip" data-atk="set">セット</button>
+                    <button type="button" class="atk-chip" data-atk="fast">速攻</button>
+                    <button type="button" class="atk-chip" data-atk="7m">7m</button>
+                </div>
+            </div>
+
+            <div class="edit-section" id="edit-course-section">
+                <div class="edit-label">コース</div>
+                <div class="goal-zone-grid" id="edit-course-grid">
+                    <button type="button" class="zone-btn" data-course="TL">左上</button>
+                    <button type="button" class="zone-btn" data-course="TR">右上</button>
+                    <button type="button" class="zone-btn" data-course="ML">左中</button>
+                    <button type="button" class="zone-btn" data-course="MR">右中</button>
+                    <button type="button" class="zone-btn" data-course="BL">左下</button>
+                    <button type="button" class="zone-btn" data-course="BR">右下</button>
+                </div>
+                <button type="button" id="edit-course-clear" class="btn-secondary" style="margin-top:6px;">コースをクリア</button>
+            </div>
+
+            <div class="edit-section" id="edit-player-section">
+                <div class="edit-label">選手</div>
+                <button type="button" id="edit-player-btn" class="edit-player-display">選手を選択</button>
+            </div>
+
+            <div style="display:flex; gap:8px; margin-top:14px;">
+                <button type="button" class="btn-action" id="btn-edit-save" style="flex:1; background:var(--success); border:none; color:#fff; padding:14px; border-radius:8px; font-weight:bold;">💾 保存</button>
+                <button type="button" id="btn-edit-delete" style="background:rgba(231,76,60,0.2); border:1px solid #e74c3c; color:#e74c3c; padding:14px 18px; border-radius:8px; font-weight:bold;">🗑 削除</button>
+            </div>
+            <button class="btn-cancel" onclick="closeEditShotModal()">キャンセル</button>
+        </div>
+    </div>
+
     <!-- History Modal -->
     <div id="history-modal" class="modal-overlay hidden" style="z-index:170;">
         <div class="modal-content">
@@ -371,6 +425,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=12"></script>
+    <script src="app.js?v=14"></script>
 </body>
 </html>

@@ -52,6 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
         courseBreakdown: document.getElementById('course-breakdown'),
         inputModeChip: document.getElementById('input-mode-chip'),
         instructionText: document.getElementById('instruction-text'),
+        swipeHint: document.getElementById('swipe-hint'),
         scoreUs: document.getElementById('score-us'),
         scoreOpponent: document.getElementById('score-opponent'),
         statAttackEfficiency: document.getElementById('stat-attack-efficiency'),
@@ -526,6 +527,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const dist = Math.hypot(dx, dy);
         const startCoords = pointerStart;
         pointerStart = null;
+        hideSwipeHint();
 
         const rect = ui.courtContainer.getBoundingClientRect();
         const xPct = ((startCoords.x - rect.left) / rect.width) * 100;
@@ -569,12 +571,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function onCourtCancel() {
         pointerStart = null;
+        hideSwipeHint();
+    }
+
+    // ── Swipe direction hint (shown during drag) ──
+    function hideSwipeHint() {
+        ui.swipeHint.classList.add('hidden');
+    }
+    function showSwipeHint(label, resultKey) {
+        ui.swipeHint.textContent = label;
+        ui.swipeHint.setAttribute('data-result', resultKey);
+        ui.swipeHint.classList.remove('hidden');
+    }
+    function onCourtMove(e) {
+        if (!pointerStart) return;
+        if (state.inputMode !== 'swipe') return;
+        const c = getEventCoords(e, 'move');
+        if (c.x == null || c.y == null) return;
+        const dx = c.x - pointerStart.x;
+        const dy = c.y - pointerStart.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < SWIPE_THRESHOLD_PX) {
+            hideSwipeHint();
+            return;
+        }
+        if (Math.abs(dx) > Math.abs(dy)) {
+            showSwipeHint('🟡 セーブ', 'save');
+        } else if (dy < 0) {
+            showSwipeHint('🟢 ゴール', 'goal');
+        } else {
+            showSwipeHint('⚪ ミス', 'miss');
+        }
     }
 
     ui.courtContainer.addEventListener('touchstart', onCourtDown, { passive: false });
+    ui.courtContainer.addEventListener('touchmove',  onCourtMove, { passive: true });
     ui.courtContainer.addEventListener('touchend', onCourtUp, { passive: false });
     ui.courtContainer.addEventListener('touchcancel', onCourtCancel);
     ui.courtContainer.addEventListener('mousedown', onCourtDown);
+    ui.courtContainer.addEventListener('mousemove', onCourtMove);
     ui.courtContainer.addEventListener('mouseup', onCourtUp);
     ui.courtContainer.addEventListener('mouseleave', onCourtCancel);
 
@@ -730,8 +765,34 @@ document.addEventListener('DOMContentLoaded', () => {
             el.style.left = `${shot.x}%`;
             el.style.top = `${shot.y}%`;
             if (shot.player) el.textContent = shot.player.replace(/^[①②③]/, '').substring(0,2);
+            attachPlotLongPress(el, shot.id);
             ui.plotsContainer.appendChild(el);
         });
+    }
+
+    // ── Long-press on plot to edit ──
+    function attachPlotLongPress(plotEl, shotId) {
+        let timer = null;
+        let cancelled = false;
+        function start(e) {
+            cancelled = false;
+            // Stop the court's mousedown/touchstart from also recording a new shot
+            e.stopPropagation();
+            timer = setTimeout(() => {
+                if (!cancelled) openEditShotModal(shotId);
+            }, 500);
+        }
+        function end(e) {
+            cancelled = true;
+            if (timer) { clearTimeout(timer); timer = null; }
+        }
+        plotEl.addEventListener('touchstart', start, { passive: false });
+        plotEl.addEventListener('touchend', end);
+        plotEl.addEventListener('touchcancel', end);
+        plotEl.addEventListener('touchmove', end);  // drag cancels long-press
+        plotEl.addEventListener('mousedown', start);
+        plotEl.addEventListener('mouseup', end);
+        plotEl.addEventListener('mouseleave', end);
     }
 
     // ── A1: 攻撃効率 / シュート決定率 / GKセーブ率 を分離計算 ──
@@ -1319,6 +1380,163 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     attachSwipeDownClose(ui_settings.modal, () => window.closeSettingsModal());
+
+    // ── Edit shot modal (long-press on plot) ──
+    let editingShotId = null;
+    let editingPlayerCache = null;
+
+    function recomputeScore() {
+        state.score.us = state.shots.filter(s => s.mode === 'attack' && s.result === 'goal').length;
+        state.score.opponent = state.shots.filter(s => s.mode === 'defense' && s.result === 'goal').length;
+        updateScoreDOM();
+    }
+
+    function openEditShotModal(shotId) {
+        const shot = state.shots.find(s => s.id === shotId);
+        if (!shot) return;
+        editingShotId = shotId;
+        editingPlayerCache = shot.player;
+
+        const t = shot.time || 0;
+        const mm = Math.floor(t / 60).toString().padStart(2, '0');
+        const ss = (t % 60).toString().padStart(2, '0');
+        document.getElementById('edit-shot-meta').textContent =
+            `${shot.mode === 'attack' ? '🔵 オフェンス' : '🔴 ディフェンス'} / ${shot.period === 2 ? '後半' : '前半'} ${mm}:${ss}`;
+
+        // Result selection
+        document.querySelectorAll('#edit-result-row .edit-result-btn').forEach(btn => {
+            btn.classList.toggle('selected', btn.getAttribute('data-result') === shot.result);
+        });
+        // Attack type
+        document.querySelectorAll('#edit-attack-type-row .atk-chip').forEach(c => {
+            c.classList.toggle('selected', c.getAttribute('data-atk') === (shot.attackType || 'set'));
+        });
+        // Course
+        document.querySelectorAll('#edit-course-grid .zone-btn').forEach(b => {
+            b.classList.toggle('selected', b.getAttribute('data-course') === shot.course);
+        });
+        const showCourse = (shot.result === 'goal' || shot.result === 'save');
+        document.getElementById('edit-course-section').classList.toggle('hidden', !showCourse);
+        // Player
+        updateEditPlayerDisplay(shot.player);
+        document.getElementById('edit-player-section').classList.toggle('hidden', shot.mode !== 'attack');
+
+        // Remove any stale player picker
+        const old = document.getElementById('edit-player-picker');
+        if (old) old.remove();
+
+        document.getElementById('edit-shot-modal').classList.remove('hidden');
+    }
+
+    function updateEditPlayerDisplay(player) {
+        document.getElementById('edit-player-btn').textContent = player || '選手を選択';
+    }
+
+    window.closeEditShotModal = function() {
+        editingShotId = null;
+        editingPlayerCache = null;
+        document.getElementById('edit-shot-modal').classList.add('hidden');
+        const picker = document.getElementById('edit-player-picker');
+        if (picker) picker.remove();
+    };
+
+    // Edit result buttons
+    document.querySelectorAll('#edit-result-row .edit-result-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('#edit-result-row .edit-result-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            const r = btn.getAttribute('data-result');
+            document.getElementById('edit-course-section').classList.toggle('hidden', r !== 'goal' && r !== 'save');
+        });
+    });
+
+    // Edit attack-type chips (scoped to edit modal)
+    document.querySelectorAll('#edit-attack-type-row .atk-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            document.querySelectorAll('#edit-attack-type-row .atk-chip').forEach(c => c.classList.remove('selected'));
+            chip.classList.add('selected');
+        });
+    });
+
+    // Edit course buttons
+    document.querySelectorAll('#edit-course-grid .zone-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('#edit-course-grid .zone-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+        });
+    });
+    document.getElementById('edit-course-clear').addEventListener('click', () => {
+        document.querySelectorAll('#edit-course-grid .zone-btn').forEach(b => b.classList.remove('selected'));
+    });
+
+    // Player picker (inline expansion)
+    document.getElementById('edit-player-btn').addEventListener('click', () => {
+        const existing = document.getElementById('edit-player-picker');
+        if (existing) { existing.remove(); return; }
+        const picker = document.createElement('div');
+        picker.id = 'edit-player-picker';
+        picker.className = 'player-grid';
+        picker.style.marginTop = '8px';
+        picker.style.maxHeight = '30vh';
+        picker.style.overflowY = 'auto';
+        // "(なし)" option first
+        const noneBtn = document.createElement('button');
+        noneBtn.type = 'button';
+        noneBtn.className = 'player-btn';
+        noneBtn.textContent = '(なし)';
+        if (!editingPlayerCache) noneBtn.classList.add('selected');
+        noneBtn.addEventListener('click', () => {
+            editingPlayerCache = null;
+            updateEditPlayerDisplay(null);
+            picker.remove();
+        });
+        picker.appendChild(noneBtn);
+        state.roster.forEach(p => {
+            const btn = createPlayerBtn(p.name, () => {
+                editingPlayerCache = p.name;
+                updateEditPlayerDisplay(p.name);
+                picker.remove();
+            });
+            if (p.name === editingPlayerCache) btn.classList.add('selected');
+            picker.appendChild(btn);
+        });
+        document.getElementById('edit-player-btn').after(picker);
+    });
+
+    // Save
+    document.getElementById('btn-edit-save').addEventListener('click', () => {
+        if (editingShotId == null) return;
+        const shot = state.shots.find(s => s.id === editingShotId);
+        if (!shot) return;
+        const newResult = document.querySelector('#edit-result-row .edit-result-btn.selected')?.getAttribute('data-result') || shot.result;
+        const newAtk = document.querySelector('#edit-attack-type-row .atk-chip.selected')?.getAttribute('data-atk') || 'set';
+        const newCourse = document.querySelector('#edit-course-grid .zone-btn.selected')?.getAttribute('data-course') || null;
+        shot.result = newResult;
+        shot.attackType = newAtk;
+        shot.course = (newResult === 'goal' || newResult === 'save') ? newCourse : null;
+        shot.player = editingPlayerCache;
+        recomputeScore();
+        renderPlots();
+        calculateStats();
+        saveState();
+        showToast('✅ 編集を保存');
+        window.closeEditShotModal();
+    });
+
+    // Delete
+    document.getElementById('btn-edit-delete').addEventListener('click', () => {
+        if (editingShotId == null) return;
+        if (!confirm('このシュートを削除しますか？\n（取り消しできません）')) return;
+        state.shots = state.shots.filter(s => s.id !== editingShotId);
+        recomputeScore();
+        renderPlots();
+        calculateStats();
+        saveState();
+        showToast('🗑 削除しました');
+        window.closeEditShotModal();
+    });
+
+    attachSwipeDownClose(document.getElementById('edit-shot-modal'), () => window.closeEditShotModal());
 
     // ── Match history + CSV export ──
     const HISTORY_KEY = 'handball-analyzer-history-v1';

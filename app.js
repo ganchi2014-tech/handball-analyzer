@@ -1535,28 +1535,37 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Teacher submission (POST CSV to Apps Script endpoint) ──
     const SUBMIT_URL_KEY  = 'handball-analyzer-submit-url-v1';
     const SUBMIT_NAME_KEY = 'handball-analyzer-student-name-v1';
+    // Built-in default endpoint — students don't need to set this manually
+    const DEFAULT_SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbw8ezXZOhDBc79CbAw-Qvle-Zqend_x-6sSnFPB5FCsiXVDxiyZTnvZKp044ZhHOJbE-A/exec';
 
-    function getSubmitUrl()  { return (localStorage.getItem(SUBMIT_URL_KEY)  || '').trim(); }
+    function getSubmitUrl()  {
+        const saved = (localStorage.getItem(SUBMIT_URL_KEY) || '').trim();
+        return saved || DEFAULT_SUBMIT_URL;
+    }
     function getStudentName(){ return (localStorage.getItem(SUBMIT_NAME_KEY) || '').trim(); }
 
     async function submitMatchToTeacher(match) {
         const url = getSubmitUrl();
-        const name = getStudentName();
+        let name = getStudentName();
         const status = document.getElementById('submit-status');
         function setStatus(cls, msg) {
             if (!status) return;
             status.className = `submit-status ${cls}`;
             status.textContent = msg;
         }
-        if (!url) {
-            showToast('⚠ 設定で送信先URLを入力してください');
-            setStatus('error', '⚠ 送信先URLが未設定');
-            return;
-        }
+        // If name missing, prompt once (saved for future)
         if (!name) {
-            showToast('⚠ 設定で自分の名前を入力してください');
-            setStatus('error', '⚠ 名前が未設定');
-            return;
+            const input = window.prompt('お名前/番号を入力してください\n（次回から省略されます）');
+            if (input && input.trim()) {
+                name = input.trim();
+                localStorage.setItem(SUBMIT_NAME_KEY, name);
+                const ni = document.getElementById('submit-name-input');
+                if (ni) ni.value = name;
+            } else {
+                showToast('⚠ 名前が必要です');
+                setStatus('error', '⚠ 名前が入力されませんでした');
+                return;
+            }
         }
         if (!match || !match.shots || match.shots.length === 0) {
             showToast('⚠ シュート記録がありません');
@@ -1598,7 +1607,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitUrlInput  = document.getElementById('submit-url-input');
     const submitNameInput = document.getElementById('submit-name-input');
     if (submitUrlInput) {
-        submitUrlInput.value = getSubmitUrl();
+        // Show only saved override (empty if using default)
+        submitUrlInput.value = localStorage.getItem(SUBMIT_URL_KEY) || '';
         submitUrlInput.addEventListener('input', () => {
             localStorage.setItem(SUBMIT_URL_KEY, submitUrlInput.value);
         });

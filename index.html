@@ -226,9 +226,15 @@
 
             <div class="settings-section">
                 <h4>📨 教師への送信</h4>
+                <div style="color:#9ed4ff; font-size:0.78rem; margin-bottom:8px;">
+                    送信先は内蔵設定済み。お名前だけ入れて送信ボタンを押すだけです。
+                </div>
                 <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;">
-                    <input type="text" id="submit-url-input" placeholder="送信先URL (Apps Script Web App URL)" class="settings-input">
                     <input type="text" id="submit-name-input" placeholder="自分の名前/番号 (例: 01岩噌)" class="settings-input">
+                    <details>
+                        <summary style="color:var(--text-muted); font-size:0.78rem; cursor:pointer;">⚙ 詳細（送信先URLの上書き）</summary>
+                        <input type="text" id="submit-url-input" placeholder="既定URLを上書きしたい場合のみ入力" class="settings-input" style="margin-top:6px;">
+                    </details>
                 </div>
                 <button type="button" id="btn-submit-current" class="btn-secondary" style="border-color: var(--primary); color: #c3e1ff;">📨 現在試合を教師に送信</button>
                 <div id="submit-status" class="submit-status hidden"></div>
@@ -438,6 +444,6 @@
     <script src="lib/roster.js?v=15"></script>
     <script src="lib/stats.js?v=15"></script>
     <script src="lib/csv.js?v=15"></script>
-    <script src="app.js?v=19"></script>
+    <script src="app.js?v=20"></script>
 </body>
 </html>

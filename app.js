@@ -687,11 +687,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    ui.inputModeChip.addEventListener('click', () => {
+    ui.inputModeChip.addEventListener('click', (e) => {
+        e.stopPropagation();
         state.inputMode = state.inputMode === 'swipe' ? 'modal' : 'swipe';
         applyInputModeToUI();
         saveState();
         showToast(state.inputMode === 'swipe' ? '👆 スワイプ入力に切替' : '📋 タップ入力に切替');
+    });
+    // Also stop touchstart/mousedown bubbling so court doesn't try to record a shot
+    ['touchstart', 'mousedown', 'touchend', 'mouseup'].forEach(t => {
+        ui.inputModeChip.addEventListener(t, (e) => e.stopPropagation(), { passive: true });
     });
 
     applyInputModeToUI();

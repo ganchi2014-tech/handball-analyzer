@@ -35,8 +35,8 @@ body {
     display: flex;
     flex-direction: column;
     height: 100%;
-    padding: 10px 15px;
-    gap: 15px;
+    padding: 6px 10px;
+    gap: 6px;
     max-width: 600px;
     margin: 0 auto;
     width: 100%;
@@ -53,10 +53,10 @@ body {
     backdrop-filter: var(--bg-blur);
     border: 1px solid var(--border-color);
     color: white;
-    padding: 8px;
+    padding: 4px 8px;
     border-radius: 8px;
     font-family: 'Inter', sans-serif;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     width: 45%;
 }
 .info-input::placeholder { color: #888; }
@@ -67,11 +67,11 @@ body {
     justify-content: space-between;
     align-items: center;
     background: var(--panel-bg);
-    padding: 15px;
-    border-radius: 16px;
+    padding: 6px 10px;
+    border-radius: 12px;
     backdrop-filter: var(--bg-blur);
     border: 1px solid var(--border-color);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.25);
 }
 
 .team {
@@ -85,36 +85,39 @@ body {
 #app.defense-mode .opponent-team .score { color: var(--defense-primary); }
 
 .score {
-    font-size: 2.2rem;
+    font-size: 1.4rem;
     font-weight: 800;
+    line-height: 1;
 }
 
 .team-name {
-    font-size: 0.8rem;
+    font-size: 0.65rem;
     color: var(--text-muted);
 }
 
 .timer {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
     width: 30%;
+    justify-content: center;
 }
 
 #time-display {
-    font-size: 1.5rem;
+    font-size: 1.1rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
+    line-height: 1;
 }
 
 #timer-toggle {
     background: rgba(255,255,255,0.1);
     border: none;
     color: white;
-    padding: 4px 20px;
-    border-radius: 20px;
-    font-size: 1rem;
+    padding: 2px 10px;
+    border-radius: 14px;
+    font-size: 0.8rem;
 }
 
 .period-chip {
@@ -141,8 +144,8 @@ body {
     align-items: center;
     gap: 4px;
     background: rgba(255, 255, 255, 0.05);
-    padding: 8px 6px;
-    border-radius: 12px;
+    padding: 4px 6px;
+    border-radius: 10px;
     overflow-x: auto;
     white-space: nowrap;
 }
@@ -157,11 +160,11 @@ body {
     background: rgba(255,255,255,0.1);
     color: white;
     border: 1px solid var(--border-color);
-    padding: 6px 4px;
-    border-radius: 8px;
-    font-size: 0.75rem;
+    padding: 3px 4px;
+    border-radius: 6px;
+    font-size: 0.72rem;
     transition: all 0.2s;
-    min-width: 40px;
+    min-width: 38px;
     text-align: center;
 }
 .gk-btn.active {
@@ -177,7 +180,7 @@ body {
 
 .mode-toggle {
     display: flex;
-    border-radius: 12px;
+    border-radius: 10px;
     overflow: hidden;
     background: rgba(44, 62, 80, 0.5);
 }
@@ -185,9 +188,9 @@ body {
 .toggle-btn {
     flex: 1;
     text-align: center;
-    padding: 12px 0;
+    padding: 4px 0;
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     cursor: pointer;
     transition: all 0.3s ease;
     color: var(--text-muted);
@@ -325,42 +328,55 @@ body {
 
 .dashboard {
     display: flex;
-    gap: 15px;
+    gap: 4px;
 }
 .stat-card {
     flex: 1;
     background: var(--panel-bg);
     backdrop-filter: var(--bg-blur);
     border: 1px solid var(--border-color);
-    padding: 12px;
-    border-radius: 12px;
+    padding: 2px 4px;
+    border-radius: 6px;
     text-align: center;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+.stat-card .stat-title {
+    display: inline;
+}
+.stat-card .stat-value {
+    display: inline;
 }
 .stat-title {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--text-muted);
-    margin-bottom: 2px;
+    margin-bottom: 0;
+    line-height: 1;
 }
 .stat-value {
-    font-size: 1.5rem;
+    font-size: 0.95rem;
     font-weight: 800;
+    line-height: 1;
 }
 
 .controls {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    padding-bottom: 5px;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 4px;
+    padding-bottom: 2px;
 }
 .btn-action {
     flex: 1;
     background: transparent;
     border: 1px solid var(--border-color);
     color: white;
-    padding: 12px;
-    border-radius: 12px;
+    padding: 8px 4px;
+    border-radius: 8px;
     font-weight: 600;
+    font-size: 0.8rem;
 }
 
 /* Bottom Sheet Modal */
@@ -814,34 +830,33 @@ body {
 }
 .edit-player-display:active { background: rgba(255,255,255,0.15); }
 
-/* Home-screen lineup chip (above mode toggle) */
-.lineup-bar {
+/* Mode toggle + lineup chip — one row */
+.mode-row {
     display: flex;
-    justify-content: center;
-    margin-top: -8px;
+    gap: 6px;
+    align-items: stretch;
+}
+.mode-row .mode-toggle {
+    flex: 1;
 }
 .lineup-chip {
     background: rgba(46, 204, 113, 0.15);
     border: 1px solid rgba(46, 204, 113, 0.4);
     color: #d4f5dd;
-    padding: 6px 14px;
-    border-radius: 14px;
-    font-size: 0.85rem;
-    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
+    white-space: nowrap;
 }
 .lineup-chip.empty {
-    background: rgba(241, 196, 15, 0.15);
-    border-color: rgba(241, 196, 15, 0.5);
+    background: rgba(241, 196, 15, 0.2);
+    border-color: rgba(241, 196, 15, 0.6);
     color: #fff3c4;
-}
-.lineup-chip-edit {
-    color: var(--primary);
-    font-size: 0.75rem;
-    text-decoration: underline;
 }
 
 /* Settings: teacher submission inputs */
@@ -964,19 +979,22 @@ body {
     grid-column: span 2;
 }
 
-/* Input mode chip */
+/* Input mode chip — overlay in court's top-right corner to save vertical space */
 .input-mode-row {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 20;
     display: flex;
     justify-content: flex-end;
-    margin-top: -8px;
 }
 .input-mode-chip {
     background: rgba(46, 204, 113, 0.18);
     border: 1px solid rgba(46, 204, 113, 0.5);
     color: #d4f5dd;
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.7rem;
     font-weight: 600;
     cursor: pointer;
 }

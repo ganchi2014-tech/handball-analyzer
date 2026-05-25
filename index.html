@@ -12,7 +12,7 @@
     <meta name="application-name" content="ハンド分析">
     
     <title>Handball Analyzer</title>
-    <link rel="stylesheet" href="styles.css?v=19">
+    <link rel="stylesheet" href="styles.css?v=21">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -49,30 +49,27 @@
             <!-- buttons populated by JS from roster -->
         </div>
 
-        <!-- 出場メンバー（ホーム画面から直接編集できるチップ） -->
-        <div class="lineup-bar">
+
+        <!-- Mode Toggle + 出場メンバー（1行に統合） -->
+        <div class="mode-row">
+            <div class="mode-toggle">
+                <input type="radio" id="mode-attack" name="mode" value="attack" checked>
+                <label for="mode-attack" class="toggle-btn attack-btn">オフェンス</label>
+
+                <input type="radio" id="mode-defense" name="mode" value="defense">
+                <label for="mode-defense" class="toggle-btn defense-btn">ディフェンス</label>
+            </div>
             <button type="button" id="btn-home-lineup" class="lineup-chip">
-                👥 出場 <span id="home-lineup-count">0/6</span>
-                <span class="lineup-chip-edit">編集</span>
+                👥 <span id="home-lineup-count">0/6</span>
             </button>
-        </div>
-
-        <!-- Mode Toggle -->
-        <div class="mode-toggle">
-            <input type="radio" id="mode-attack" name="mode" value="attack" checked>
-            <label for="mode-attack" class="toggle-btn attack-btn">オフェンス (自のシュート)</label>
-
-            <input type="radio" id="mode-defense" name="mode" value="defense">
-            <label for="mode-defense" class="toggle-btn defense-btn">ディフェンス (相手のシュート)</label>
-        </div>
-
-        <!-- Input Mode Toggle -->
-        <div class="input-mode-row">
-            <button type="button" id="input-mode-chip" class="input-mode-chip" data-input="swipe">👆 スワイプ入力</button>
         </div>
 
         <!-- Court Map (SVG) -->
         <div class="court-container" id="court-container">
+            <!-- Input mode toggle floats in top-right corner of court -->
+            <div class="input-mode-row">
+                <button type="button" id="input-mode-chip" class="input-mode-chip" data-input="swipe">👆 スワイプ</button>
+            </div>
             <svg class="court-svg" viewBox="0 0 400 300" preserveAspectRatio="none">
                 <!-- Court Area -->
                 <rect x="0" y="0" width="400" height="300" fill="rgba(0,0,0,0.3)" />
@@ -453,6 +450,6 @@
     <script src="lib/roster.js?v=15"></script>
     <script src="lib/stats.js?v=15"></script>
     <script src="lib/csv.js?v=15"></script>
-    <script src="app.js?v=25"></script>
+    <script src="app.js?v=26"></script>
 </body>
 </html>

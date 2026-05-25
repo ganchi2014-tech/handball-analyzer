@@ -488,6 +488,38 @@ body {
     pointer-events: none;
 }
 
+/* Live swap lineup edit modal */
+.lineup-edit-section {
+    margin-bottom: 14px;
+}
+.lineup-hint-inline {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 400;
+}
+#lineup-on-grid {
+    min-height: 60px;
+}
+#lineup-on-grid:empty::before {
+    content: "出場メンバー未設定（ベンチからタップして登録）";
+    display: block;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    padding: 16px;
+    background: rgba(241, 196, 15, 0.08);
+    border: 1px dashed rgba(241, 196, 15, 0.3);
+    border-radius: 6px;
+}
+.modal-drag-handle {
+    width: 40px;
+    height: 4px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 2px;
+    margin: -8px auto 8px;
+    touch-action: none;
+}
+
 /* TO reason buttons */
 .to-reason-grid {
     display: grid;
@@ -553,10 +585,9 @@ body {
 .course-mini-goal {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
+    grid-template-rows: repeat(3, minmax(30px, 1fr));
     gap: 2px;
     width: 100%;
-    aspect-ratio: 3 / 2;
     background: #1a1f2c;
     border: 2px solid rgba(255,255,255,0.5);
     border-radius: 4px;
@@ -584,14 +615,13 @@ body {
     margin-top: 2px;
 }
 
-/* Shot course (goal mouth 2x2) */
+/* Shot course (goal mouth 2col x 3row = 6 zones) */
 .goal-zone-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
+    grid-template-rows: repeat(3, minmax(56px, 1fr));
     gap: 4px;
     width: 100%;
-    aspect-ratio: 3 / 2;
     max-height: 50vh;
     background: #1a1f2c;
     border: 3px solid #fff;
@@ -603,11 +633,12 @@ body {
     background: rgba(255,255,255,0.06);
     border: 1px dashed rgba(255,255,255,0.25);
     color: #fff;
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 700;
     border-radius: 4px;
     cursor: pointer;
     touch-action: manipulation;
+    min-height: 56px;
 }
 .zone-btn:active {
     background: rgba(52, 152, 219, 0.5);

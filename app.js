@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
         currentGk: '桑原',
         rsFilter: 'all',
         lineup: [],            // 出場中の選手名（最大6名、GKを除く）
-        lineupEditTemp: [],    // 編集モーダルの一時状態
         period: 1,             // 1=前半, 2=後半
         inputMode: 'swipe'     // 'swipe' or 'modal'
     };
@@ -40,9 +39,9 @@ document.addEventListener('DOMContentLoaded', () => {
         benchToggle: document.getElementById('bench-toggle'),
         benchArrow: document.getElementById('bench-arrow'),
         lineupModal: document.getElementById('lineup-modal'),
-        lineupEditGrid: document.getElementById('lineup-edit-grid'),
-        lineupEditCount: document.getElementById('lineup-edit-count'),
-        btnLineupSave: document.getElementById('btn-lineup-save'),
+        lineupOnGrid: document.getElementById('lineup-on-grid'),
+        lineupBenchGrid: document.getElementById('lineup-bench-grid'),
+        lineupOnCount: document.getElementById('lineup-on-count'),
         playerStepTitle: document.getElementById('player-step-title'),
         btnSkipPlayer: document.getElementById('btn-skip-player'),
         timeDisplay: document.getElementById('time-display'),
@@ -247,53 +246,59 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.benchArrow.textContent = isHidden ? '▶' : '▼';
     });
 
-    // ── Lineup edit modal ──
+    // ── Lineup edit modal (live swap, immediate commits) ──
     function openLineupModal() {
-        state.lineupEditTemp = [...state.lineup];
-        renderLineupEditGrid();
+        renderLineupModal();
         ui.lineupModal.classList.remove('hidden');
     }
 
     window.closeLineupModal = function() {
         ui.lineupModal.classList.add('hidden');
-        state.lineupEditTemp = [];
     };
 
-    function renderLineupEditGrid() {
-        ui.lineupEditGrid.innerHTML = '';
-        const atMax = state.lineupEditTemp.length >= LINEUP_MAX;
-        playerPositions.forEach(p => {
-            const selected = state.lineupEditTemp.includes(p);
-            const btn = createPlayerBtn(p, () => toggleLineupEdit(p));
-            if (selected) btn.classList.add('selected');
-            else if (atMax) btn.classList.add('disabled');
-            ui.lineupEditGrid.appendChild(btn);
+    function renderLineupModal() {
+        // 出場中 grid — preserve roster order
+        ui.lineupOnGrid.innerHTML = '';
+        const onCourtSorted = playerPositions.filter(p => state.lineup.includes(p));
+        onCourtSorted.forEach(p => {
+            ui.lineupOnGrid.appendChild(createPlayerBtn(p, () => benchPlayer(p)));
         });
-        ui.lineupEditCount.textContent = `${state.lineupEditTemp.length}/${LINEUP_MAX}`;
+        ui.lineupOnCount.textContent = `${state.lineup.length}/${LINEUP_MAX}`;
+
+        // ベンチ grid
+        ui.lineupBenchGrid.innerHTML = '';
+        const atMax = state.lineup.length >= LINEUP_MAX;
+        playerPositions.forEach(p => {
+            if (state.lineup.includes(p)) return;
+            const btn = createPlayerBtn(p, () => fieldPlayer(p));
+            if (atMax) btn.classList.add('disabled');
+            ui.lineupBenchGrid.appendChild(btn);
+        });
     }
 
-    function toggleLineupEdit(p) {
-        const i = state.lineupEditTemp.indexOf(p);
-        if (i >= 0) {
-            state.lineupEditTemp.splice(i, 1);
-        } else {
-            if (state.lineupEditTemp.length >= LINEUP_MAX) return;
-            state.lineupEditTemp.push(p);
+    function benchPlayer(p) {
+        state.lineup = state.lineup.filter(x => x !== p);
+        saveState();
+        renderLineupModal();
+        populatePlayerStep();
+        showToast(`⬇ ${p.replace(/^[①②③]/, '')} ベンチへ`);
+    }
+
+    function fieldPlayer(p) {
+        if (state.lineup.length >= LINEUP_MAX) {
+            showToast(`⚠ 出場が満員（${LINEUP_MAX}名）`);
+            return;
         }
-        renderLineupEditGrid();
+        if (!state.lineup.includes(p)) state.lineup.push(p);
+        // Keep stored order canonical (roster order)
+        state.lineup = playerPositions.filter(x => state.lineup.includes(x));
+        saveState();
+        renderLineupModal();
+        populatePlayerStep();
+        showToast(`⬆ ${p.replace(/^[①②③]/, '')} 出場へ`);
     }
 
     ui.btnEditLineup.addEventListener('click', openLineupModal);
-
-    ui.btnLineupSave.addEventListener('click', () => {
-        // Preserve roster order from playerPositions
-        state.lineup = playerPositions.filter(p => state.lineupEditTemp.includes(p));
-        state.lineupEditTemp = [];
-        ui.lineupModal.classList.add('hidden');
-        saveState();
-        populatePlayerStep();
-        showToast(`✅ 出場 ${state.lineup.length}名 設定`);
-    });
 
     // Toggle logic
     ui.modeAttack.addEventListener('change', () => setMode('attack'));
@@ -375,6 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 time: state.timer.seconds,
                 gk: state.currentGk,
                 period: state.period,
+                attackType: 'set',
                 toReason: null
             };
             // Open modal at the reason step
@@ -383,6 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ui.stepCourse.classList.add('hidden');
             ui.stepPlayer.classList.add('hidden');
             ui.stepToReason.classList.remove('hidden');
+            resetAttackChips('set');
         });
     }
 
@@ -533,6 +540,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     applyInputModeToUI();
 
+    function resetAttackChips(toType = 'set') {
+        document.querySelectorAll('.atk-chip').forEach(c => {
+            c.classList.toggle('selected', c.getAttribute('data-atk') === toType);
+        });
+    }
+
     function openModal() {
         ui.modal.classList.remove('hidden');
         ui.stepResult.classList.remove('hidden');
@@ -542,10 +555,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Reset player step for normal shot flow
         ui.playerStepTitle.textContent = '選手を選択';
         ui.btnSkipPlayer.style.display = 'none';
-        // Reset attack type chips to default
-        document.querySelectorAll('.atk-chip').forEach(c => {
-            c.classList.toggle('selected', c.getAttribute('data-atk') === 'set');
-        });
+        resetAttackChips('set');
         populatePlayerStep();
     }
 
@@ -907,9 +917,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (ui.courseBreakdown) {
             // For attack: each zone shows goals/onTarget (= goals + saves with that course recorded)
             // For defense: each zone shows goals/onTarget (failed/total) — i.e. failures to save
-            const zones = ['TL', 'TR', 'BL', 'BR'];
-            const off = { TL:{g:0,s:0}, TR:{g:0,s:0}, BL:{g:0,s:0}, BR:{g:0,s:0} };
-            const def = { TL:{g:0,s:0}, TR:{g:0,s:0}, BL:{g:0,s:0}, BR:{g:0,s:0} };
+            const zones = ['TL', 'TR', 'ML', 'MR', 'BL', 'BR'];
+            const makeBuckets = () => Object.fromEntries(zones.map(z => [z, {g:0, s:0}]));
+            const off = makeBuckets();
+            const def = makeBuckets();
             state.shots.forEach(sh => {
                 if (!sh.course || !zones.includes(sh.course)) return;
                 if (sh.result !== 'goal' && sh.result !== 'save') return;
@@ -1168,4 +1179,45 @@ document.addEventListener('DOMContentLoaded', () => {
     // Extra safety: save on page hide/unload
     window.addEventListener('pagehide', saveState);
     window.addEventListener('beforeunload', saveState);
+
+    // ── Modal: swipe-down (in top area) to close ──
+    function attachSwipeDownClose(modalEl, closeFn) {
+        const content = modalEl && modalEl.querySelector('.modal-content');
+        if (!content) return;
+        const HEADER_ZONE_PX = 80;
+        const CLOSE_DY = 80;
+        let touchStart = null;
+        let mouseStart = null;
+
+        content.addEventListener('touchstart', (e) => {
+            const r = content.getBoundingClientRect();
+            const t = e.touches[0];
+            if (t.clientY - r.top > HEADER_ZONE_PX) { touchStart = null; return; }
+            touchStart = { x: t.clientX, y: t.clientY };
+        }, { passive: true });
+        content.addEventListener('touchend', (e) => {
+            if (!touchStart) return;
+            const t = e.changedTouches[0];
+            const dy = t.clientY - touchStart.y;
+            const dx = Math.abs(t.clientX - touchStart.x);
+            touchStart = null;
+            if (dy > CLOSE_DY && dy > dx * 2) closeFn();
+        });
+        // Mouse fallback (for desktop / testing)
+        content.addEventListener('mousedown', (e) => {
+            const r = content.getBoundingClientRect();
+            if (e.clientY - r.top > HEADER_ZONE_PX) { mouseStart = null; return; }
+            mouseStart = { x: e.clientX, y: e.clientY };
+        });
+        content.addEventListener('mouseup', (e) => {
+            if (!mouseStart) return;
+            const dy = e.clientY - mouseStart.y;
+            const dx = Math.abs(e.clientX - mouseStart.x);
+            mouseStart = null;
+            if (dy > CLOSE_DY && dy > dx * 2) closeFn();
+        });
+    }
+    attachSwipeDownClose(ui.modal, () => window.closeModal());
+    attachSwipeDownClose(ui.summaryModal, () => window.closeSummaryModal());
+    attachSwipeDownClose(ui.lineupModal, () => window.closeLineupModal());
 });

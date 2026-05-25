@@ -12,7 +12,7 @@
     <meta name="application-name" content="ハンド分析">
     
     <title>Handball Analyzer</title>
-    <link rel="stylesheet" href="styles.css?v=9">
+    <link rel="stylesheet" href="styles.css?v=11">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -123,16 +123,17 @@
     <!-- Action Action Sheet Modal -->
     <div id="action-modal" class="modal-overlay hidden">
         <div class="modal-content">
+            <div class="modal-drag-handle"></div>
             <h3 id="modal-title">シュート結果</h3>
-            
+            <!-- 攻撃種別（全ステップ共通、TOステップでも表示） -->
+            <div class="attack-type-row" id="attack-type-row">
+                <button type="button" class="atk-chip selected" data-atk="set">セット</button>
+                <button type="button" class="atk-chip" data-atk="fast">速攻</button>
+                <button type="button" class="atk-chip" data-atk="7m">7m</button>
+            </div>
+
             <!-- Step 1: Result Selection -->
             <div id="step-result" class="step">
-                <!-- 攻撃種別 -->
-                <div class="attack-type-row">
-                    <button type="button" class="atk-chip selected" data-atk="set">セット</button>
-                    <button type="button" class="atk-chip" data-atk="fast">速攻</button>
-                    <button type="button" class="atk-chip" data-atk="7m">7m</button>
-                </div>
                 <button class="action-btn success-btn" data-result="goal">🟢 ゴール (得点)</button>
                 <button class="action-btn save-btn" data-result="save" id="btn-save-text">🟡 相手GKセーブ</button>
                 <button class="action-btn miss-btn" data-result="miss" id="btn-miss-text">⚪ ミス (枠外/ポスト)</button>
@@ -159,6 +160,8 @@
                 <div class="goal-zone-grid">
                     <button type="button" class="zone-btn" data-course="TL">左上</button>
                     <button type="button" class="zone-btn" data-course="TR">右上</button>
+                    <button type="button" class="zone-btn" data-course="ML">左中</button>
+                    <button type="button" class="zone-btn" data-course="MR">右中</button>
                     <button type="button" class="zone-btn" data-course="BL">左下</button>
                     <button type="button" class="zone-btn" data-course="BR">右下</button>
                 </div>
@@ -197,24 +200,36 @@
         </div>
     </div>
 
-    <!-- Lineup Edit Modal -->
+    <!-- Lineup Edit Modal (live swap, no save button) -->
     <div id="lineup-modal" class="modal-overlay hidden" style="z-index:150;">
         <div class="modal-content">
-            <h3>出場メンバーを選択</h3>
-            <p style="text-align:center; color:#aaa; font-size:0.85rem; margin: -5px 0 10px;">
-                タップで選択/解除（最大6名）　<span id="lineup-edit-count">0/6</span>
-            </p>
-            <div id="lineup-edit-grid" class="player-grid"></div>
-            <div style="display:flex; gap:10px; margin-top:15px;">
-                <button type="button" class="btn-action" id="btn-lineup-save" style="flex:1; background: var(--success); border:none; color:#fff; padding:14px; border-radius:8px; font-weight:bold;">確定</button>
-                <button type="button" class="btn-cancel" onclick="closeLineupModal()" style="flex:1; margin-top:0;">キャンセル</button>
+            <div class="modal-drag-handle"></div>
+            <h3>出場メンバー（即時反映）</h3>
+
+            <div class="lineup-edit-section">
+                <div class="roster-header">
+                    <span>出場中 <span id="lineup-on-count" class="roster-count">0/6</span></span>
+                    <span class="lineup-hint-inline">タップで下げる ↓</span>
+                </div>
+                <div id="lineup-on-grid" class="player-grid lineup-grid"></div>
             </div>
+
+            <div class="lineup-edit-section">
+                <div class="roster-header">
+                    <span>ベンチ</span>
+                    <span class="lineup-hint-inline">タップで上げる ↑</span>
+                </div>
+                <div id="lineup-bench-grid" class="player-grid"></div>
+            </div>
+
+            <button type="button" class="btn-cancel" onclick="closeLineupModal()">閉じる</button>
         </div>
     </div>
 
     <!-- Summary Modal -->
     <div id="summary-modal" class="modal-overlay hidden" style="z-index: 200;">
         <div class="modal-content summary-content">
+            <div class="modal-drag-handle"></div>
             <h3>試合集約データ</h3>
             <div id="summary-match-info" style="text-align:center; color:#aaa; margin-bottom:15px; font-size:0.95rem; font-weight:600;"></div>
             
@@ -312,6 +327,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=9"></script>
+    <script src="app.js?v=11"></script>
 </body>
 </html>

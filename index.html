@@ -12,7 +12,7 @@
     <meta name="application-name" content="ハンド分析">
     
     <title>Handball Analyzer</title>
-    <link rel="stylesheet" href="styles.css?v=8">
+    <link rel="stylesheet" href="styles.css?v=9">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -139,6 +139,20 @@
                 <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
             </div>
             
+            <!-- Step 0: Turnover reason -->
+            <div id="step-to-reason" class="step hidden">
+                <h3 id="to-reason-title">ミスの理由</h3>
+                <div class="to-reason-grid">
+                    <button type="button" class="to-reason-btn" data-reason="pass">🔁 パスミス</button>
+                    <button type="button" class="to-reason-btn" data-reason="dribble">🏀 ドリブル</button>
+                    <button type="button" class="to-reason-btn" data-reason="foul">⚠️ オフェンスファール</button>
+                    <button type="button" class="to-reason-btn" data-reason="passive">⏱️ パッシブ</button>
+                    <button type="button" class="to-reason-btn" data-reason="other">❓ その他</button>
+                </div>
+                <button type="button" class="btn-skip" id="btn-skip-to-reason">⏭ 理由不明（スキップ）</button>
+                <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+            </div>
+
             <!-- Step 1.5: Shot Course (only for goal/save) -->
             <div id="step-course" class="step hidden">
                 <h3>シュートコース</h3>
@@ -263,6 +277,11 @@
                     <div style="margin-bottom:6px; font-weight:bold;">シュートコース（シューター視点）</div>
                     <div id="course-breakdown" class="course-breakdown-row"></div>
                 </div>
+                <hr style="border-color: #444; margin: 8px 0;">
+                <div style="color:#ccc; font-size:0.9rem;">
+                    <div style="margin-bottom:6px; font-weight:bold;">ターンオーバー理由</div>
+                    <div id="to-reason-breakdown"></div>
+                </div>
             </div>
             
             <h4 style="margin-top:15px; margin-bottom:8px; color:#fff;">得点経過（ランニングスコア）</h4>
@@ -293,6 +312,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=8"></script>
+    <script src="app.js?v=9"></script>
 </body>
 </html>

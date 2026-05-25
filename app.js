@@ -27,7 +27,10 @@ document.addEventListener('DOMContentLoaded', () => {
         stepResult: document.getElementById('step-result'),
         stepCourse: document.getElementById('step-course'),
         stepPlayer: document.getElementById('step-player'),
+        stepToReason: document.getElementById('step-to-reason'),
         btnSkipCourse: document.getElementById('btn-skip-course'),
+        btnSkipToReason: document.getElementById('btn-skip-to-reason'),
+        toReasonBreakdown: document.getElementById('to-reason-breakdown'),
         lineupGrid: document.getElementById('lineup-grid'),
         benchGrid: document.getElementById('bench-grid'),
         lineupCount: document.getElementById('lineup-count'),
@@ -359,7 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1500);
     }
 
-    // ── A2: Turnover Button with optional player selection ──
+    // ── A2: Turnover Button — opens reason step first ──
     if (ui.btnTurnover) {
         ui.btnTurnover.addEventListener('click', () => {
             state.currentDraftShot = {
@@ -371,25 +374,51 @@ document.addEventListener('DOMContentLoaded', () => {
                 player: null,
                 time: state.timer.seconds,
                 gk: state.currentGk,
-                period: state.period
+                period: state.period,
+                toReason: null
             };
-            if (state.mode === 'defense') {
-                // ディフェンスモード：相手チームなので選手選択不要、即記録
-                state.shots.push(state.currentDraftShot);
-                state.currentDraftShot = null;
-                renderPlots();
-                calculateStats();
-                saveState();
-                showToast('💨 相手ミス記録しました');
-            } else {
-                // オフェンスモード：選手選択モーダルを表示
-                ui.modal.classList.remove('hidden');
-                ui.stepResult.classList.add('hidden');
-                ui.stepPlayer.classList.remove('hidden');
-                ui.playerStepTitle.textContent = 'ミスした選手を選択（任意）';
-                ui.btnSkipPlayer.style.display = 'block';
-                populatePlayerStep();
-            }
+            // Open modal at the reason step
+            ui.modal.classList.remove('hidden');
+            ui.stepResult.classList.add('hidden');
+            ui.stepCourse.classList.add('hidden');
+            ui.stepPlayer.classList.add('hidden');
+            ui.stepToReason.classList.remove('hidden');
+        });
+    }
+
+    function proceedAfterToReason() {
+        ui.stepToReason.classList.add('hidden');
+        if (state.mode === 'defense') {
+            // 相手のTO: 選手選択不要、即記録
+            state.shots.push(state.currentDraftShot);
+            state.currentDraftShot = null;
+            ui.modal.classList.add('hidden');
+            renderPlots();
+            calculateStats();
+            saveState();
+            showToast('💨 相手ミス記録しました');
+        } else {
+            // 自TO: ミスした選手を選択
+            ui.stepPlayer.classList.remove('hidden');
+            ui.playerStepTitle.textContent = 'ミスした選手を選択（任意）';
+            ui.btnSkipPlayer.style.display = 'block';
+            populatePlayerStep();
+        }
+    }
+
+    document.querySelectorAll('#step-to-reason .to-reason-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            if (!state.currentDraftShot) return;
+            state.currentDraftShot.toReason = e.target.getAttribute('data-reason');
+            proceedAfterToReason();
+        });
+    });
+
+    if (ui.btnSkipToReason) {
+        ui.btnSkipToReason.addEventListener('click', () => {
+            if (!state.currentDraftShot) return;
+            state.currentDraftShot.toReason = null;
+            proceedAfterToReason();
         });
     }
 
@@ -509,6 +538,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.stepResult.classList.remove('hidden');
         ui.stepCourse.classList.add('hidden');
         ui.stepPlayer.classList.add('hidden');
+        ui.stepToReason.classList.add('hidden');
         // Reset player step for normal shot flow
         ui.playerStepTitle.textContent = '選手を選択';
         ui.btnSkipPlayer.style.display = 'none';
@@ -903,6 +933,40 @@ document.addEventListener('DOMContentLoaded', () => {
             ui.courseBreakdown.innerHTML =
                 renderGrid(off, 'オフェンス', 'var(--primary)', '決定率（得点/枠内）') +
                 renderGrid(def, 'ディフェンス', 'var(--defense-primary)', '失点率（失点/枠内）');
+        }
+
+        // ── ターンオーバー理由ブレイクダウン ──
+        if (ui.toReasonBreakdown) {
+            const reasonLabels = {
+                pass: '🔁 パスミス',
+                dribble: '🏀 ドリブル',
+                foul: '⚠️ オフェンスファール',
+                passive: '⏱️ パッシブ',
+                other: '❓ その他'
+            };
+            const offReasons = {};
+            const defReasons = {};
+            let offUnk = 0, defUnk = 0;
+            state.shots.forEach(s => {
+                if (s.result !== 'turnover') return;
+                const bucket = s.mode === 'attack' ? offReasons : defReasons;
+                if (!s.toReason) {
+                    if (s.mode === 'attack') offUnk++; else defUnk++;
+                    return;
+                }
+                bucket[s.toReason] = (bucket[s.toReason] || 0) + 1;
+            });
+            function reasonsRow(bucket, unk, label, color) {
+                const parts = Object.keys(reasonLabels)
+                    .filter(k => bucket[k])
+                    .map(k => `<span style="margin-right:10px;">${reasonLabels[k]}: <strong>${bucket[k]}</strong></span>`);
+                if (unk > 0) parts.push(`<span style="color:#888; margin-right:10px;">未指定: ${unk}</span>`);
+                const content = parts.length > 0 ? parts.join('') : '<span style="color:#666;">なし</span>';
+                return `<div style="margin-bottom:4px;"><strong style="color:${color};">${label}</strong>: ${content}</div>`;
+            }
+            ui.toReasonBreakdown.innerHTML =
+                reasonsRow(offReasons, offUnk, '自チーム', 'var(--primary)') +
+                reasonsRow(defReasons, defUnk, '相手', 'var(--defense-primary)');
         }
 
         // ── C2: 選手別テーブル（シュート数列追加） ──

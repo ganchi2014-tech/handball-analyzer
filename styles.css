@@ -488,6 +488,32 @@ body {
     pointer-events: none;
 }
 
+/* TO reason buttons */
+.to-reason-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 10px 0;
+}
+.to-reason-btn {
+    background: rgba(230, 126, 34, 0.18);
+    border: 1px solid rgba(230, 126, 34, 0.5);
+    color: #ffe5cc;
+    padding: 14px 6px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+}
+.to-reason-btn:active {
+    background: rgba(230, 126, 34, 0.4);
+    transform: scale(0.97);
+}
+.to-reason-btn[data-reason="other"] {
+    grid-column: span 2;
+}
+
 /* Input mode chip */
 .input-mode-row {
     display: flex;

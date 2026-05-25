@@ -1533,8 +1533,9 @@ document.addEventListener('DOMContentLoaded', () => {
     attachSwipeDownClose(document.getElementById('edit-shot-modal'), () => window.closeEditShotModal());
 
     // ── Teacher submission (POST CSV to Apps Script endpoint) ──
-    const SUBMIT_URL_KEY  = 'handball-analyzer-submit-url-v1';
-    const SUBMIT_NAME_KEY = 'handball-analyzer-student-name-v1';
+    const SUBMIT_URL_KEY    = 'handball-analyzer-submit-url-v1';
+    const SUBMIT_NAME_KEY   = 'handball-analyzer-student-name-v1';
+    const DEVICE_ID_KEY     = 'handball-analyzer-device-id-v1';
     // Built-in default endpoint — students don't need to set this manually
     const DEFAULT_SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbw8ezXZOhDBc79CbAw-Qvle-Zqend_x-6sSnFPB5FCsiXVDxiyZTnvZKp044ZhHOJbE-A/exec';
 
@@ -1542,30 +1543,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const saved = (localStorage.getItem(SUBMIT_URL_KEY) || '').trim();
         return saved || DEFAULT_SUBMIT_URL;
     }
-    function getStudentName(){ return (localStorage.getItem(SUBMIT_NAME_KEY) || '').trim(); }
+    function getDeviceId() {
+        let id = localStorage.getItem(DEVICE_ID_KEY);
+        if (!id) {
+            // 短くて読みやすい ID（生徒が後から見ても区別できる）
+            id = 'dev-' + Math.random().toString(36).substring(2, 6)
+                       + '-' + Math.random().toString(36).substring(2, 6);
+            localStorage.setItem(DEVICE_ID_KEY, id);
+        }
+        return id;
+    }
+    function getStudentName() {
+        const userName = (localStorage.getItem(SUBMIT_NAME_KEY) || '').trim();
+        return userName || getDeviceId();
+    }
 
     async function submitMatchToTeacher(match) {
         const url = getSubmitUrl();
-        let name = getStudentName();
+        const name = getStudentName();
         const status = document.getElementById('submit-status');
         function setStatus(cls, msg) {
             if (!status) return;
             status.className = `submit-status ${cls}`;
             status.textContent = msg;
-        }
-        // If name missing, prompt once (saved for future)
-        if (!name) {
-            const input = window.prompt('お名前/番号を入力してください\n（次回から省略されます）');
-            if (input && input.trim()) {
-                name = input.trim();
-                localStorage.setItem(SUBMIT_NAME_KEY, name);
-                const ni = document.getElementById('submit-name-input');
-                if (ni) ni.value = name;
-            } else {
-                showToast('⚠ 名前が必要です');
-                setStatus('error', '⚠ 名前が入力されませんでした');
-                return;
-            }
         }
         if (!match || !match.shots || match.shots.length === 0) {
             showToast('⚠ シュート記録がありません');
@@ -1606,6 +1606,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Settings: load saved values into inputs, save on change
     const submitUrlInput  = document.getElementById('submit-url-input');
     const submitNameInput = document.getElementById('submit-name-input');
+    const deviceIdDisplay = document.getElementById('device-id-display');
     if (submitUrlInput) {
         // Show only saved override (empty if using default)
         submitUrlInput.value = localStorage.getItem(SUBMIT_URL_KEY) || '';
@@ -1613,8 +1614,12 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem(SUBMIT_URL_KEY, submitUrlInput.value);
         });
     }
+    if (deviceIdDisplay) {
+        deviceIdDisplay.textContent = getDeviceId();
+    }
     if (submitNameInput) {
-        submitNameInput.value = getStudentName();
+        // Show only the user-provided override (empty if relying on device ID)
+        submitNameInput.value = localStorage.getItem(SUBMIT_NAME_KEY) || '';
         submitNameInput.addEventListener('input', () => {
             localStorage.setItem(SUBMIT_NAME_KEY, submitNameInput.value);
         });

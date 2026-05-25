@@ -12,7 +12,7 @@
     <meta name="application-name" content="ハンド分析">
     
     <title>Handball Analyzer</title>
-    <link rel="stylesheet" href="styles.css?v=3">
+    <link rel="stylesheet" href="styles.css?v=4">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -129,12 +129,45 @@
             
             <!-- Step 2: Player Selection -->
             <div id="step-player" class="step hidden">
-                <h3 id="player-step-title">ポジション(選手)を選択</h3>
-                <div class="player-grid">
-                    <!-- Javascript populates -->
+                <h3 id="player-step-title">選手を選択</h3>
+
+                <!-- 出場中セクション -->
+                <div id="lineup-section" class="roster-section">
+                    <div class="roster-header">
+                        <span>出場中 <span id="lineup-count" class="roster-count">0/6</span></span>
+                        <button type="button" id="btn-edit-lineup" class="btn-link">編集</button>
+                    </div>
+                    <div id="lineup-grid" class="player-grid lineup-grid"></div>
+                    <div id="lineup-empty-hint" class="lineup-empty-hint hidden">
+                        出場メンバーを設定すると素早く選択できます
+                    </div>
                 </div>
+
+                <!-- ベンチセクション（折りたたみ） -->
+                <div id="bench-section" class="roster-section">
+                    <div class="roster-header collapsible" id="bench-toggle">
+                        <span><span id="bench-arrow">▶</span> ベンチ（全員から選ぶ）</span>
+                    </div>
+                    <div id="bench-grid" class="player-grid bench-grid hidden"></div>
+                </div>
+
                 <button class="btn-skip" id="btn-skip-player" style="display:none;">⏭ スキップ（選手指定なし）</button>
                 <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lineup Edit Modal -->
+    <div id="lineup-modal" class="modal-overlay hidden" style="z-index:150;">
+        <div class="modal-content">
+            <h3>出場メンバーを選択</h3>
+            <p style="text-align:center; color:#aaa; font-size:0.85rem; margin: -5px 0 10px;">
+                タップで選択/解除（最大6名）　<span id="lineup-edit-count">0/6</span>
+            </p>
+            <div id="lineup-edit-grid" class="player-grid"></div>
+            <div style="display:flex; gap:10px; margin-top:15px;">
+                <button type="button" class="btn-action" id="btn-lineup-save" style="flex:1; background: var(--success); border:none; color:#fff; padding:14px; border-radius:8px; font-weight:bold;">確定</button>
+                <button type="button" class="btn-cancel" onclick="closeLineupModal()" style="flex:1; margin-top:0;">キャンセル</button>
             </div>
         </div>
     </div>
@@ -225,6 +258,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=3"></script>
+    <script src="app.js?v=4"></script>
 </body>
 </html>

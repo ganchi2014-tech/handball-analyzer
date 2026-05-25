@@ -391,6 +391,84 @@ body {
 }
 .step.hidden { display: none; }
 
+/* ── Roster (lineup / bench) sections ── */
+.roster-section {
+    margin-bottom: 12px;
+}
+.roster-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 4px 8px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.roster-header.collapsible {
+    cursor: pointer;
+    user-select: none;
+}
+.roster-count {
+    color: var(--primary);
+    margin-left: 6px;
+    font-size: 0.8rem;
+}
+.btn-link {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--primary);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-weight: 600;
+}
+.btn-link:active {
+    background: rgba(52, 152, 219, 0.2);
+}
+
+.lineup-grid {
+    grid-template-columns: repeat(3, 1fr);
+    max-height: none;
+    overflow-y: visible;
+}
+.lineup-grid .player-btn {
+    padding: 14px 4px;
+    font-size: 0.9rem;
+    min-height: 52px;
+}
+.lineup-grid:empty {
+    display: none;
+}
+
+.bench-grid {
+    margin-top: 6px;
+    max-height: 36vh;
+}
+
+.lineup-empty-hint {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    padding: 10px;
+    background: rgba(241, 196, 15, 0.08);
+    border-radius: 6px;
+    border: 1px dashed rgba(241, 196, 15, 0.3);
+}
+.lineup-empty-hint.hidden { display: none; }
+
+/* Selected state for lineup edit modal */
+.player-btn.selected {
+    background: var(--success) !important;
+    border-color: #27ae60 !important;
+    color: #fff !important;
+    box-shadow: 0 0 8px rgba(46, 204, 113, 0.5);
+}
+.player-btn.disabled {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
 .summary-content {
     background: rgba(25, 30, 45, 0.85);
     backdrop-filter: blur(20px);

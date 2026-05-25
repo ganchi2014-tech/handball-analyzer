@@ -6,8 +6,12 @@ document.addEventListener('DOMContentLoaded', () => {
         timer: { running: false, seconds: 0, interval: null },
         score: { us: 0, opponent: 0 },
         currentGk: '桑原',
-        rsFilter: 'all'
+        rsFilter: 'all',
+        lineup: [],            // 出場中の選手名（最大6名、GKを除く）
+        lineupEditTemp: []     // 編集モーダルの一時状態
     };
+
+    const LINEUP_MAX = 6;
 
     const ui = {
         app: document.getElementById('app'),
@@ -19,7 +23,18 @@ document.addEventListener('DOMContentLoaded', () => {
         modal: document.getElementById('action-modal'),
         stepResult: document.getElementById('step-result'),
         stepPlayer: document.getElementById('step-player'),
-        playerGrid: document.querySelector('.player-grid'),
+        lineupGrid: document.getElementById('lineup-grid'),
+        benchGrid: document.getElementById('bench-grid'),
+        lineupCount: document.getElementById('lineup-count'),
+        lineupEmptyHint: document.getElementById('lineup-empty-hint'),
+        lineupSection: document.getElementById('lineup-section'),
+        btnEditLineup: document.getElementById('btn-edit-lineup'),
+        benchToggle: document.getElementById('bench-toggle'),
+        benchArrow: document.getElementById('bench-arrow'),
+        lineupModal: document.getElementById('lineup-modal'),
+        lineupEditGrid: document.getElementById('lineup-edit-grid'),
+        lineupEditCount: document.getElementById('lineup-edit-count'),
+        btnLineupSave: document.getElementById('btn-lineup-save'),
         playerStepTitle: document.getElementById('player-step-title'),
         btnSkipPlayer: document.getElementById('btn-skip-player'),
         timeDisplay: document.getElementById('time-display'),
@@ -68,6 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 timer: { seconds: state.timer.seconds },
                 mode: state.mode,
                 currentGk: state.currentGk,
+                lineup: state.lineup,
                 matchDate: ui.dateInput.value,
                 matchOpponent: ui.opponentInput.value,
                 savedAt: Date.now()
@@ -92,6 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
             state.timer.seconds = (snap.timer && typeof snap.timer.seconds === 'number') ? snap.timer.seconds : 0;
             state.mode = snap.mode === 'defense' ? 'defense' : 'attack';
             state.currentGk = snap.currentGk || state.currentGk;
+            state.lineup = Array.isArray(snap.lineup) ? snap.lineup.filter(p => playerPositions.includes(p)) : [];
 
             if (snap.matchDate) ui.dateInput.value = snap.matchDate;
             if (snap.matchOpponent) ui.opponentInput.value = snap.matchOpponent;
@@ -154,24 +171,108 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Populate position buttons
+    // Player roster
     const playerPositions = [
         '③赤塚', '③岩噌', '③川崎', '③北村', '③辻', '③中田', '③伴', '③山本', '③桑原', '③杉本',
         '②新井', '②猪田', '②北林', '②田端', '②藤川', '②松岡', '②村田', '②安田', '②小川', '②田口',
         '①石黒', '①岩噌', '①大野', '①北川', '①嶌本', '①福原', '①増田', '①水田', '①宮崎', '①森井', '①山崎', '①関山'
     ];
-    playerPositions.forEach(pos => {
+
+    function createPlayerBtn(pos, onClick) {
         const btn = document.createElement('button');
+        btn.type = 'button';
         btn.className = 'player-btn';
-        
-        // 学年別の色分けクラス追加
         if (pos.startsWith('③')) btn.classList.add('grade-3');
         else if (pos.startsWith('②')) btn.classList.add('grade-2');
         else if (pos.startsWith('①')) btn.classList.add('grade-1');
-
         btn.textContent = pos;
-        btn.onclick = () => handlePlayerSelect(pos);
-        ui.playerGrid.appendChild(btn);
+        btn.onclick = onClick;
+        return btn;
+    }
+
+    // ── Roster modal population (called when modal opens) ──
+    function populatePlayerStep() {
+        // Lineup grid
+        ui.lineupGrid.innerHTML = '';
+        state.lineup.forEach(p => {
+            ui.lineupGrid.appendChild(createPlayerBtn(p, () => handlePlayerSelect(p)));
+        });
+        ui.lineupCount.textContent = `${state.lineup.length}/${LINEUP_MAX}`;
+
+        // Empty hint + bench expansion behavior
+        const hasLineup = state.lineup.length > 0;
+        if (hasLineup) {
+            ui.lineupEmptyHint.classList.add('hidden');
+            // Bench starts collapsed when lineup is set
+            ui.benchGrid.classList.add('hidden');
+            ui.benchArrow.textContent = '▶';
+        } else {
+            ui.lineupEmptyHint.classList.remove('hidden');
+            // Bench expanded when no lineup
+            ui.benchGrid.classList.remove('hidden');
+            ui.benchArrow.textContent = '▼';
+        }
+
+        // Bench grid (exclude lineup members)
+        ui.benchGrid.innerHTML = '';
+        playerPositions.forEach(p => {
+            if (state.lineup.includes(p)) return;
+            ui.benchGrid.appendChild(createPlayerBtn(p, () => handlePlayerSelect(p)));
+        });
+    }
+
+    // Bench section collapse toggle
+    ui.benchToggle.addEventListener('click', () => {
+        const isHidden = ui.benchGrid.classList.toggle('hidden');
+        ui.benchArrow.textContent = isHidden ? '▶' : '▼';
+    });
+
+    // ── Lineup edit modal ──
+    function openLineupModal() {
+        state.lineupEditTemp = [...state.lineup];
+        renderLineupEditGrid();
+        ui.lineupModal.classList.remove('hidden');
+    }
+
+    window.closeLineupModal = function() {
+        ui.lineupModal.classList.add('hidden');
+        state.lineupEditTemp = [];
+    };
+
+    function renderLineupEditGrid() {
+        ui.lineupEditGrid.innerHTML = '';
+        const atMax = state.lineupEditTemp.length >= LINEUP_MAX;
+        playerPositions.forEach(p => {
+            const selected = state.lineupEditTemp.includes(p);
+            const btn = createPlayerBtn(p, () => toggleLineupEdit(p));
+            if (selected) btn.classList.add('selected');
+            else if (atMax) btn.classList.add('disabled');
+            ui.lineupEditGrid.appendChild(btn);
+        });
+        ui.lineupEditCount.textContent = `${state.lineupEditTemp.length}/${LINEUP_MAX}`;
+    }
+
+    function toggleLineupEdit(p) {
+        const i = state.lineupEditTemp.indexOf(p);
+        if (i >= 0) {
+            state.lineupEditTemp.splice(i, 1);
+        } else {
+            if (state.lineupEditTemp.length >= LINEUP_MAX) return;
+            state.lineupEditTemp.push(p);
+        }
+        renderLineupEditGrid();
+    }
+
+    ui.btnEditLineup.addEventListener('click', openLineupModal);
+
+    ui.btnLineupSave.addEventListener('click', () => {
+        // Preserve roster order from playerPositions
+        state.lineup = playerPositions.filter(p => state.lineupEditTemp.includes(p));
+        state.lineupEditTemp = [];
+        ui.lineupModal.classList.add('hidden');
+        saveState();
+        populatePlayerStep();
+        showToast(`✅ 出場 ${state.lineup.length}名 設定`);
     });
 
     // Toggle logic
@@ -256,6 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ui.stepPlayer.classList.remove('hidden');
                 ui.playerStepTitle.textContent = 'ミスした選手を選択（任意）';
                 ui.btnSkipPlayer.style.display = 'block';
+                populatePlayerStep();
             }
         });
     }
@@ -296,8 +398,9 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.stepResult.classList.remove('hidden');
         ui.stepPlayer.classList.add('hidden');
         // Reset player step for normal shot flow
-        ui.playerStepTitle.textContent = 'ポジション(選手)を選択';
+        ui.playerStepTitle.textContent = '選手を選択';
         ui.btnSkipPlayer.style.display = 'none';
+        populatePlayerStep();
     }
 
     window.closeModal = function() {

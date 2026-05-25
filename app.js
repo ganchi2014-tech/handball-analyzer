@@ -57,10 +57,92 @@ document.addEventListener('DOMContentLoaded', () => {
         opponentInput: document.getElementById('match-opponent')
     };
 
+    // ── Persistence (localStorage auto-save) ──
+    const STORAGE_KEY = 'handball-analyzer-state-v1';
+
+    function saveState() {
+        try {
+            const snapshot = {
+                shots: state.shots,
+                score: state.score,
+                timer: { seconds: state.timer.seconds },
+                mode: state.mode,
+                currentGk: state.currentGk,
+                matchDate: ui.dateInput.value,
+                matchOpponent: ui.opponentInput.value,
+                savedAt: Date.now()
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+        } catch (e) {
+            console.warn('saveState failed', e);
+        }
+    }
+
+    function loadState() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return false;
+            const snap = JSON.parse(raw);
+            if (!snap || typeof snap !== 'object') return false;
+
+            state.shots = Array.isArray(snap.shots) ? snap.shots : [];
+            state.score = snap.score && typeof snap.score === 'object'
+                ? { us: snap.score.us|0, opponent: snap.score.opponent|0 }
+                : { us: 0, opponent: 0 };
+            state.timer.seconds = (snap.timer && typeof snap.timer.seconds === 'number') ? snap.timer.seconds : 0;
+            state.mode = snap.mode === 'defense' ? 'defense' : 'attack';
+            state.currentGk = snap.currentGk || state.currentGk;
+
+            if (snap.matchDate) ui.dateInput.value = snap.matchDate;
+            if (snap.matchOpponent) ui.opponentInput.value = snap.matchOpponent;
+
+            // Mode radio + classes
+            if (state.mode === 'defense') {
+                ui.modeDefense.checked = true;
+                ui.app.classList.remove('attack-mode');
+                ui.app.classList.add('defense-mode');
+                ui.btnSaveText.textContent = '🟡 自軍GKセーブ';
+            } else {
+                ui.modeAttack.checked = true;
+                ui.app.classList.remove('defense-mode');
+                ui.app.classList.add('attack-mode');
+                ui.btnSaveText.textContent = '🟡 相手GKセーブ';
+            }
+
+            // GK button active state
+            ui.gkBtns.forEach(b => {
+                if (b.getAttribute('data-gk') === state.currentGk) b.classList.add('active');
+                else b.classList.remove('active');
+            });
+
+            updateScoreDOM();
+            updateTimer();
+            renderPlots();
+            calculateStats();
+
+            // Hide the "tap to record" overlay if there's already data
+            if (state.shots.length > 0) ui.instruction.style.opacity = '0';
+
+            return state.shots.length > 0 || state.timer.seconds > 0
+                || state.score.us > 0 || state.score.opponent > 0;
+        } catch (e) {
+            console.warn('loadState failed', e);
+            return false;
+        }
+    }
+
+    function clearSavedState() {
+        try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    }
+
     // Set today's date as default
     const tzoffset = (new Date()).getTimezoneOffset() * 60000;
     const localISOTime = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
     ui.dateInput.value = localISOTime;
+
+    // Persist match info on edit
+    ui.dateInput.addEventListener('change', saveState);
+    ui.opponentInput.addEventListener('input', saveState);
 
     // GK Toggle logic
     ui.gkBtns.forEach(btn => {
@@ -68,6 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ui.gkBtns.forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
             state.currentGk = e.target.getAttribute('data-gk');
+            saveState();
         });
     });
 
@@ -108,6 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         renderPlots();
         calculateStats();
+        saveState();
     }
 
     // Timer
@@ -122,6 +206,8 @@ document.addEventListener('DOMContentLoaded', () => {
             state.timer.interval = setInterval(() => {
                 state.timer.seconds++;
                 updateTimer();
+                // Save every 10s to limit writes while still being recoverable
+                if (state.timer.seconds % 10 === 0) saveState();
             }, 1000);
         }
     });
@@ -161,6 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 state.currentDraftShot = null;
                 renderPlots();
                 calculateStats();
+                saveState();
                 showToast('💨 相手ミス記録しました');
             } else {
                 // オフェンスモード：選手選択モーダルを表示
@@ -249,7 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function addShotAndClose() {
         state.shots.push(state.currentDraftShot);
-        
+
         if (state.currentDraftShot.result === 'goal') {
             if (state.currentDraftShot.mode === 'attack') state.score.us++;
             else state.score.opponent++;
@@ -259,6 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
         closeModal();
         renderPlots();
         calculateStats();
+        saveState();
     }
 
     function updateScoreDOM() {
@@ -334,6 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         renderPlots();
         calculateStats();
+        saveState();
     });
 
     ui.btnData.addEventListener('click', () => {
@@ -633,7 +722,8 @@ document.addEventListener('DOMContentLoaded', () => {
             updateScoreDOM();
             renderPlots();
             calculateStats();
-            
+            clearSavedState();
+
             ui.btnReset.classList.remove('confirm-mode');
             ui.btnReset.textContent = '↺ リセット';
             ui.btnReset.style.backgroundColor = 'transparent';
@@ -658,4 +748,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const adjustHeight = () => { ui.app.style.height = `${window.innerHeight}px`; };
     window.addEventListener('resize', adjustHeight);
     adjustHeight();
+
+    // ── Restore saved data on load ──
+    const hadData = loadState();
+    if (hadData) {
+        // Slight delay so the toast appears after initial render
+        setTimeout(() => showToast('🔄 前回のデータを復元しました'), 200);
+    }
+
+    // Extra safety: save on page hide/unload
+    window.addEventListener('pagehide', saveState);
+    window.addEventListener('beforeunload', saveState);
 });

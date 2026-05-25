@@ -23,7 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
         instruction: document.getElementById('court-instruction'),
         modal: document.getElementById('action-modal'),
         stepResult: document.getElementById('step-result'),
+        stepCourse: document.getElementById('step-course'),
         stepPlayer: document.getElementById('step-player'),
+        btnSkipCourse: document.getElementById('btn-skip-course'),
         lineupGrid: document.getElementById('lineup-grid'),
         benchGrid: document.getElementById('bench-grid'),
         lineupCount: document.getElementById('lineup-count'),
@@ -43,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
         periodToggle: document.getElementById('period-toggle'),
         periodBreakdown: document.getElementById('period-breakdown'),
         attackTypeBreakdown: document.getElementById('attack-type-breakdown'),
+        courseBreakdown: document.getElementById('course-breakdown'),
         scoreUs: document.getElementById('score-us'),
         scoreOpponent: document.getElementById('score-opponent'),
         statAttackEfficiency: document.getElementById('stat-attack-efficiency'),
@@ -417,6 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function openModal() {
         ui.modal.classList.remove('hidden');
         ui.stepResult.classList.remove('hidden');
+        ui.stepCourse.classList.add('hidden');
         ui.stepPlayer.classList.add('hidden');
         // Reset player step for normal shot flow
         ui.playerStepTitle.textContent = '選手を選択';
@@ -449,9 +453,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('#step-result .action-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            state.currentDraftShot.result = e.target.getAttribute('data-result');
-            
-            if (state.mode === 'attack') {
+            const result = e.target.getAttribute('data-result');
+            state.currentDraftShot.result = result;
+
+            // Course step only for shots that hit the goalkeeper (goal or save).
+            // Miss skips course; turnover doesn't pass through this handler.
+            if (result === 'goal' || result === 'save') {
+                ui.stepResult.classList.add('hidden');
+                ui.stepCourse.classList.remove('hidden');
+            } else if (state.mode === 'attack') {
                 ui.stepResult.classList.add('hidden');
                 ui.stepPlayer.classList.remove('hidden');
             } else {
@@ -459,6 +469,32 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    // Course selection
+    function proceedAfterCourse() {
+        ui.stepCourse.classList.add('hidden');
+        if (state.mode === 'attack') {
+            ui.stepPlayer.classList.remove('hidden');
+        } else {
+            addShotAndClose();
+        }
+    }
+
+    document.querySelectorAll('#step-course .zone-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            if (!state.currentDraftShot) return;
+            state.currentDraftShot.course = e.target.getAttribute('data-course');
+            proceedAfterCourse();
+        });
+    });
+
+    if (ui.btnSkipCourse) {
+        ui.btnSkipCourse.addEventListener('click', () => {
+            if (!state.currentDraftShot) return;
+            state.currentDraftShot.course = null;
+            proceedAfterCourse();
+        });
+    }
 
     function handlePlayerSelect(num) {
         if (!state.currentDraftShot) return;
@@ -748,6 +784,38 @@ document.addEventListener('DOMContentLoaded', () => {
             }).join('');
             const untaggedNote = untagged > 0 ? `<div style="color:#666; font-size:0.8em; margin-top:3px;">未分類: ${untagged}</div>` : '';
             ui.attackTypeBreakdown.innerHTML = `<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">${cells}</div>${untaggedNote}`;
+        }
+
+        // ── コース別ブレイクダウン ──
+        if (ui.courseBreakdown) {
+            // For attack: each zone shows goals/onTarget (= goals + saves with that course recorded)
+            // For defense: each zone shows goals/onTarget (failed/total) — i.e. failures to save
+            const zones = ['TL', 'TR', 'BL', 'BR'];
+            const off = { TL:{g:0,s:0}, TR:{g:0,s:0}, BL:{g:0,s:0}, BR:{g:0,s:0} };
+            const def = { TL:{g:0,s:0}, TR:{g:0,s:0}, BL:{g:0,s:0}, BR:{g:0,s:0} };
+            state.shots.forEach(sh => {
+                if (!sh.course || !zones.includes(sh.course)) return;
+                if (sh.result !== 'goal' && sh.result !== 'save') return;
+                const bucket = sh.mode === 'attack' ? off[sh.course] : def[sh.course];
+                if (sh.result === 'goal') bucket.g++;
+                else bucket.s++;
+            });
+            const renderGrid = (data, title, color, modeLabel) => {
+                const cells = zones.map(z => {
+                    const tot = data[z].g + data[z].s;
+                    // For attack: goal rate = goals/onTarget. For defense: concede rate = goals/onTarget
+                    const rate = tot === 0 ? '—' : `${Math.round((data[z].g/tot)*100)}%`;
+                    return `<div class="course-cell"><div class="ratio">${rate}</div><div class="raw">${data[z].g}/${tot}</div></div>`;
+                }).join('');
+                return `<div class="course-mini-goal-wrapper">
+                    <div class="course-mini-goal-title" style="color:${color};">${title}</div>
+                    <div class="course-mini-goal">${cells}</div>
+                    <div style="font-size:0.7rem; color:#888; margin-top:3px;">${modeLabel}</div>
+                </div>`;
+            };
+            ui.courseBreakdown.innerHTML =
+                renderGrid(off, 'オフェンス', 'var(--primary)', '決定率（得点/枠内）') +
+                renderGrid(def, 'ディフェンス', 'var(--defense-primary)', '失点率（失点/枠内）');
         }
 
         // ── C2: 選手別テーブル（シュート数列追加） ──

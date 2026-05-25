@@ -488,6 +488,91 @@ body {
     pointer-events: none;
 }
 
+/* Course breakdown in summary (mini 2x2 goal per mode) */
+.course-breakdown-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+.course-mini-goal-wrapper {
+    text-align: center;
+}
+.course-mini-goal-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+.course-mini-goal {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 2px;
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    background: #1a1f2c;
+    border: 2px solid rgba(255,255,255,0.5);
+    border-radius: 4px;
+    padding: 2px;
+}
+.course-cell {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.75rem;
+    color: #fff;
+    background: rgba(255,255,255,0.05);
+    border-radius: 2px;
+    padding: 4px 2px;
+    line-height: 1.1;
+}
+.course-cell .ratio {
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+.course-cell .raw {
+    color: #888;
+    font-size: 0.65rem;
+    margin-top: 2px;
+}
+
+/* Shot course (goal mouth 2x2) */
+.goal-zone-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 4px;
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    max-height: 50vh;
+    background: #1a1f2c;
+    border: 3px solid #fff;
+    border-radius: 6px;
+    padding: 4px;
+    margin: 10px 0 6px;
+}
+.zone-btn {
+    background: rgba(255,255,255,0.06);
+    border: 1px dashed rgba(255,255,255,0.25);
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 700;
+    border-radius: 4px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.zone-btn:active {
+    background: rgba(52, 152, 219, 0.5);
+    border-color: var(--primary);
+    transform: scale(0.97);
+}
+.step-hint {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    margin: 4px 0 8px;
+}
+
 /* Attack type chips on result modal */
 .attack-type-row {
     display: flex;

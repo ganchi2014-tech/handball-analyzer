@@ -12,7 +12,7 @@
     <meta name="application-name" content="ハンド分析">
     
     <title>Handball Analyzer</title>
-    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="styles.css?v=7">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -134,6 +134,20 @@
                 <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
             </div>
             
+            <!-- Step 1.5: Shot Course (only for goal/save) -->
+            <div id="step-course" class="step hidden">
+                <h3>シュートコース</h3>
+                <div class="goal-zone-grid">
+                    <button type="button" class="zone-btn" data-course="TL">左上</button>
+                    <button type="button" class="zone-btn" data-course="TR">右上</button>
+                    <button type="button" class="zone-btn" data-course="BL">左下</button>
+                    <button type="button" class="zone-btn" data-course="BR">右下</button>
+                </div>
+                <p class="step-hint">シューター視点</p>
+                <button type="button" class="btn-skip" id="btn-skip-course">⏭ コース不明（スキップ）</button>
+                <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+            </div>
+
             <!-- Step 2: Player Selection -->
             <div id="step-player" class="step hidden">
                 <h3 id="player-step-title">選手を選択</h3>
@@ -239,6 +253,11 @@
                 <div id="period-breakdown" style="color:#ccc; font-size:0.9rem;"></div>
                 <hr style="border-color: #444; margin: 8px 0;">
                 <div id="attack-type-breakdown" style="color:#ccc; font-size:0.9rem;"></div>
+                <hr style="border-color: #444; margin: 8px 0;">
+                <div style="color:#ccc; font-size:0.9rem;">
+                    <div style="margin-bottom:6px; font-weight:bold;">シュートコース（シューター視点）</div>
+                    <div id="course-breakdown" class="course-breakdown-row"></div>
+                </div>
             </div>
             
             <h4 style="margin-top:15px; margin-bottom:8px; color:#fff;">得点経過（ランニングスコア）</h4>
@@ -269,6 +288,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=6"></script>
+    <script src="app.js?v=7"></script>
 </body>
 </html>

@@ -1532,6 +1532,95 @@ document.addEventListener('DOMContentLoaded', () => {
 
     attachSwipeDownClose(document.getElementById('edit-shot-modal'), () => window.closeEditShotModal());
 
+    // ── Teacher submission (POST CSV to Apps Script endpoint) ──
+    const SUBMIT_URL_KEY  = 'handball-analyzer-submit-url-v1';
+    const SUBMIT_NAME_KEY = 'handball-analyzer-student-name-v1';
+
+    function getSubmitUrl()  { return (localStorage.getItem(SUBMIT_URL_KEY)  || '').trim(); }
+    function getStudentName(){ return (localStorage.getItem(SUBMIT_NAME_KEY) || '').trim(); }
+
+    async function submitMatchToTeacher(match) {
+        const url = getSubmitUrl();
+        const name = getStudentName();
+        const status = document.getElementById('submit-status');
+        function setStatus(cls, msg) {
+            if (!status) return;
+            status.className = `submit-status ${cls}`;
+            status.textContent = msg;
+        }
+        if (!url) {
+            showToast('⚠ 設定で送信先URLを入力してください');
+            setStatus('error', '⚠ 送信先URLが未設定');
+            return;
+        }
+        if (!name) {
+            showToast('⚠ 設定で自分の名前を入力してください');
+            setStatus('error', '⚠ 名前が未設定');
+            return;
+        }
+        if (!match || !match.shots || match.shots.length === 0) {
+            showToast('⚠ シュート記録がありません');
+            return;
+        }
+        const filename = `handball_${HA.csv.safeFilenamePart(match.date || 'undated')}_${HA.csv.safeFilenamePart(match.opponent || 'match')}.csv`;
+        const csv = HA.csv.matchToCsv(match);
+        showToast('📨 送信中…');
+        setStatus('', '送信中…');
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                // text/plain で送ることで CORS preflight を回避
+                body: JSON.stringify({
+                    studentName: name,
+                    matchDate: match.date || '',
+                    opponent: match.opponent || '',
+                    filename,
+                    csv
+                })
+            });
+            // Apps Script は通常 JSON を返すが、エラー時は HTML の可能性も
+            let data = null;
+            const text = await res.text();
+            try { data = JSON.parse(text); } catch (e) {
+                throw new Error(`想定外のレスポンス: ${text.slice(0, 100)}`);
+            }
+            if (!data.ok) throw new Error(data.error || 'unknown');
+            const msg = data.replaced ? '🔄 既存データを置換しました' : '✅ 送信完了';
+            showToast(msg);
+            setStatus('success', `${msg}（${data.rowsAdded || 0}件追記）`);
+        } catch (e) {
+            showToast(`⚠ 送信失敗: ${e.message}`);
+            setStatus('error', `送信失敗: ${e.message}`);
+        }
+    }
+
+    // Settings: load saved values into inputs, save on change
+    const submitUrlInput  = document.getElementById('submit-url-input');
+    const submitNameInput = document.getElementById('submit-name-input');
+    if (submitUrlInput) {
+        submitUrlInput.value = getSubmitUrl();
+        submitUrlInput.addEventListener('input', () => {
+            localStorage.setItem(SUBMIT_URL_KEY, submitUrlInput.value);
+        });
+    }
+    if (submitNameInput) {
+        submitNameInput.value = getStudentName();
+        submitNameInput.addEventListener('input', () => {
+            localStorage.setItem(SUBMIT_NAME_KEY, submitNameInput.value);
+        });
+    }
+
+    const btnSubmitCurrent = document.getElementById('btn-submit-current');
+    if (btnSubmitCurrent) {
+        btnSubmitCurrent.addEventListener('click', () => {
+            submitMatchToTeacher({
+                date: ui.dateInput.value,
+                opponent: ui.opponentInput.value,
+                shots: state.shots
+            });
+        });
+    }
+
     // ── Match history + CSV export (CSV utils delegated to HA.csv) ──
     const HISTORY_KEY = 'handball-analyzer-history-v1';
 
@@ -1655,6 +1744,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="history-row-actions">
                     <button type="button" class="btn-secondary-mini" data-action="view">📊 詳細</button>
+                    <button type="button" class="btn-secondary-mini" data-action="submit">📨 送信</button>
                     <button type="button" class="btn-secondary-mini" data-action="csv">📤 CSV</button>
                     <button type="button" class="btn-secondary-mini delete" data-action="delete">🗑 削除</button>
                 </div>
@@ -1665,6 +1755,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 generateSummary(match);
                 ui.summaryModal.classList.remove('hidden');
             });
+            row.querySelector('[data-action="submit"]').addEventListener('click', () => submitMatchToTeacher(match));
             row.querySelector('[data-action="csv"]').addEventListener('click', () => exportMatchCsv(match));
             row.querySelector('[data-action="delete"]').addEventListener('click', () => {
                 if (!confirm(`この試合（${match.date} vs ${match.opponent}）を履歴から削除しますか？`)) return;

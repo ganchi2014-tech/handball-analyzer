@@ -802,6 +802,38 @@ body {
 }
 .edit-player-display:active { background: rgba(255,255,255,0.15); }
 
+/* Settings: teacher submission inputs */
+.settings-input {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid var(--border-color);
+    color: #fff;
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    width: 100%;
+}
+.settings-input::placeholder {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+.submit-status {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+.submit-status.success {
+    background: rgba(46, 204, 113, 0.15);
+    border: 1px solid rgba(46, 204, 113, 0.4);
+    color: #c5f0d3;
+}
+.submit-status.error {
+    background: rgba(231, 76, 60, 0.15);
+    border: 1px solid rgba(231, 76, 60, 0.4);
+    color: #ffd0d0;
+}
+.submit-status.hidden { display: none; }
+
 /* History modal */
 .history-list {
     max-height: 50vh;

@@ -12,7 +12,7 @@
     <meta name="application-name" content="ハンド分析">
     
     <title>Handball Analyzer</title>
-    <link rel="stylesheet" href="styles.css?v=16">
+    <link rel="stylesheet" href="styles.css?v=17">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -225,6 +225,16 @@
             </div>
 
             <div class="settings-section">
+                <h4>📨 教師への送信</h4>
+                <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;">
+                    <input type="text" id="submit-url-input" placeholder="送信先URL (Apps Script Web App URL)" class="settings-input">
+                    <input type="text" id="submit-name-input" placeholder="自分の名前/番号 (例: 01岩噌)" class="settings-input">
+                </div>
+                <button type="button" id="btn-submit-current" class="btn-secondary" style="border-color: var(--primary); color: #c3e1ff;">📨 現在試合を教師に送信</button>
+                <div id="submit-status" class="submit-status hidden"></div>
+            </div>
+
+            <div class="settings-section">
                 <h4>データ管理</h4>
                 <button type="button" id="btn-export-current-csv" class="btn-secondary">📤 現在試合のCSV（共有/保存）</button>
                 <button type="button" id="btn-open-history" class="btn-secondary">📚 試合履歴 (<span id="history-count">0</span>)</button>
@@ -428,6 +438,6 @@
     <script src="lib/roster.js?v=15"></script>
     <script src="lib/stats.js?v=15"></script>
     <script src="lib/csv.js?v=15"></script>
-    <script src="app.js?v=18"></script>
+    <script src="app.js?v=19"></script>
 </body>
 </html>

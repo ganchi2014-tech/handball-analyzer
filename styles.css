@@ -616,17 +616,29 @@ body {
     margin-bottom: 8px;
 }
 .roster-edit-row {
-    display: grid;
-    grid-template-columns: auto 1fr auto auto;
-    gap: 8px;
+    display: flex;
     align-items: center;
-    padding: 6px 4px;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 8px;
     border-bottom: 1px solid rgba(255,255,255,0.05);
     color: #fff;
     font-size: 0.9rem;
 }
 .roster-edit-row:last-child { border-bottom: none; }
-.roster-edit-row .player-name { font-weight: 600; }
+.roster-edit-row .player-name {
+    font-weight: 600;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.roster-row-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
 .roster-edit-row .gk-mark {
     color: var(--save);
     font-weight: 700;

@@ -12,7 +12,7 @@
     <meta name="application-name" content="ハンド分析">
     
     <title>Handball Analyzer</title>
-    <link rel="stylesheet" href="styles.css?v=18">
+    <link rel="stylesheet" href="styles.css?v=19">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -233,30 +233,21 @@
             </div>
 
             <div class="settings-section">
-                <h4>📨 教師への送信</h4>
-                <div style="color:#9ed4ff; font-size:0.78rem; margin-bottom:8px;">
-                    送信先は内蔵設定済み。下のボタンを押すだけで届きます。
-                </div>
-                <button type="button" id="btn-submit-current" class="btn-secondary" style="border-color: var(--primary); color: #c3e1ff;">📨 現在試合を教師に送信</button>
-                <div id="submit-status" class="submit-status hidden"></div>
-                <details style="margin-top:10px;">
-                    <summary style="color:var(--text-muted); font-size:0.78rem; cursor:pointer;">⚙ 詳細（名前・送信先の上書き）</summary>
-                    <div style="display:flex; flex-direction:column; gap:6px; margin-top:6px;">
-                        <input type="text" id="submit-name-input" placeholder="名前/番号を指定したい場合（例: 01岩噌）" class="settings-input">
-                        <input type="text" id="submit-url-input" placeholder="既定URLを上書きしたい場合のみ" class="settings-input">
-                        <div style="font-size:0.7rem; color:var(--text-muted);">
-                            名前を未入力の場合、端末ごとの自動IDが使われます (<span id="device-id-display"></span>)
-                        </div>
-                    </div>
-                </details>
+                <h4>履歴</h4>
+                <button type="button" id="btn-open-history" class="btn-secondary">📚 試合履歴 (<span id="history-count">0</span>)</button>
             </div>
 
-            <div class="settings-section">
-                <h4>データ管理</h4>
-                <button type="button" id="btn-export-current-csv" class="btn-secondary">📤 現在試合のCSV（共有/保存）</button>
-                <button type="button" id="btn-open-history" class="btn-secondary">📚 試合履歴 (<span id="history-count">0</span>)</button>
-                <button type="button" id="btn-finish-match" class="btn-secondary" style="border-color: var(--success); color: #d4f5dd;">🏁 試合を履歴に保存して新規開始</button>
-            </div>
+            <details class="settings-section" style="opacity:0.7;">
+                <summary style="color:var(--text-muted); font-size:0.85rem; cursor:pointer; font-weight:600;">⚙ 詳細設定（送信用の名前・URL上書き）</summary>
+                <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
+                    <input type="text" id="submit-name-input" placeholder="表示名を指定したい場合（例: 01岩噌）" class="settings-input">
+                    <input type="text" id="submit-url-input" placeholder="送信先URLを上書きしたい場合のみ" class="settings-input">
+                    <div style="font-size:0.7rem; color:var(--text-muted);">
+                        表示名未指定時の自動ID: <span id="device-id-display"></span>
+                    </div>
+                </div>
+                <div id="submit-status" class="submit-status hidden" style="margin-top:8px;"></div>
+            </details>
 
             <button class="btn-cancel" onclick="closeSettingsModal()">閉じる</button>
         </div>
@@ -462,6 +453,6 @@
     <script src="lib/roster.js?v=15"></script>
     <script src="lib/stats.js?v=15"></script>
     <script src="lib/csv.js?v=15"></script>
-    <script src="app.js?v=24"></script>
+    <script src="app.js?v=25"></script>
 </body>
 </html>

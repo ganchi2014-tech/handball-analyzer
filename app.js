@@ -1369,9 +1369,10 @@ document.addEventListener('DOMContentLoaded', () => {
             row.className = 'roster-edit-row';
             row.innerHTML = `
                 <span class="player-name">${player.name}</span>
-                <span></span>
-                <button type="button" class="gk-toggle-btn ${player.isGK ? '' : 'inactive'}">GK</button>
-                <button type="button" class="delete-btn">削除</button>
+                <div class="roster-row-actions">
+                    <button type="button" class="gk-toggle-btn ${player.isGK ? '' : 'inactive'}">GK</button>
+                    <button type="button" class="delete-btn">削除</button>
+                </div>
             `;
             row.querySelector('.gk-toggle-btn').addEventListener('click', () => {
                 state.roster[idx].isGK = !state.roster[idx].isGK;
@@ -1765,18 +1766,20 @@ document.addEventListener('DOMContentLoaded', () => {
         saveState();
     }
 
-    ui_settings.btnFinishMatch.addEventListener('click', () => {
-        if (state.shots.length === 0) {
-            showToast('⚠ 記録されたシュートがありません');
-            return;
-        }
-        if (!confirm(`現在の試合（${state.shots.length} 件）を履歴に保存して新規試合を開始します。\nよろしいですか？`)) return;
-        const match = archiveCurrentMatch();
-        clearCurrentMatch();
-        updateHistoryCount();
-        showToast(`✅ 「${match.date} vs ${match.opponent || '対戦相手'}」を保存`);
-        window.closeSettingsModal();
-    });
+    if (ui_settings.btnFinishMatch) {
+        ui_settings.btnFinishMatch.addEventListener('click', () => {
+            if (state.shots.length === 0) {
+                showToast('⚠ 記録されたシュートがありません');
+                return;
+            }
+            if (!confirm(`現在の試合（${state.shots.length} 件）を履歴に保存して新規試合を開始します。\nよろしいですか？`)) return;
+            const match = archiveCurrentMatch();
+            clearCurrentMatch();
+            updateHistoryCount();
+            showToast(`✅ 「${match.date} vs ${match.opponent || '対戦相手'}」を保存`);
+            window.closeSettingsModal();
+        });
+    }
 
     // ── CSV export (low-level utils in HA.csv) ──
     async function exportMatchCsv(match) {
@@ -1789,13 +1792,15 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (outcome === 'downloaded') showToast('📥 ダウンロードしました');
         // 'aborted' → silent
     }
-    ui_settings.btnExportCurrent.addEventListener('click', () => {
-        exportMatchCsv({
-            date: ui.dateInput.value,
-            opponent: ui.opponentInput.value,
-            shots: state.shots
+    if (ui_settings.btnExportCurrent) {
+        ui_settings.btnExportCurrent.addEventListener('click', () => {
+            exportMatchCsv({
+                date: ui.dateInput.value,
+                opponent: ui.opponentInput.value,
+                shots: state.shots
+            });
         });
-    });
+    }
 
     // ── History modal ──
     const computeMatchQuickStats = HA.stats.computeMatchQuickStats;

@@ -12,7 +12,7 @@
     <meta name="application-name" content="ハンド分析">
     
     <title>Handball Analyzer</title>
-    <link rel="stylesheet" href="styles.css?v=5">
+    <link rel="stylesheet" href="styles.css?v=6">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -122,6 +122,12 @@
             
             <!-- Step 1: Result Selection -->
             <div id="step-result" class="step">
+                <!-- 攻撃種別 -->
+                <div class="attack-type-row">
+                    <button type="button" class="atk-chip selected" data-atk="set">セット</button>
+                    <button type="button" class="atk-chip" data-atk="fast">速攻</button>
+                    <button type="button" class="atk-chip" data-atk="7m">7m</button>
+                </div>
                 <button class="action-btn success-btn" data-result="goal">🟢 ゴール (得点)</button>
                 <button class="action-btn save-btn" data-result="save" id="btn-save-text">🟡 相手GKセーブ</button>
                 <button class="action-btn miss-btn" data-result="miss" id="btn-miss-text">⚪ ミス (枠外/ポスト)</button>
@@ -231,6 +237,8 @@
                 <div id="gk-individual-stats" style="margin-top: 5px; color: #bbb;"></div>
                 <hr style="border-color: #444; margin: 8px 0;">
                 <div id="period-breakdown" style="color:#ccc; font-size:0.9rem;"></div>
+                <hr style="border-color: #444; margin: 8px 0;">
+                <div id="attack-type-breakdown" style="color:#ccc; font-size:0.9rem;"></div>
             </div>
             
             <h4 style="margin-top:15px; margin-bottom:8px; color:#fff;">得点経過（ランニングスコア）</h4>
@@ -261,6 +269,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=5"></script>
+    <script src="app.js?v=6"></script>
 </body>
 </html>

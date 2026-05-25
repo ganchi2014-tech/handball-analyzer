@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
         timerToggle: document.getElementById('timer-toggle'),
         periodToggle: document.getElementById('period-toggle'),
         periodBreakdown: document.getElementById('period-breakdown'),
+        attackTypeBreakdown: document.getElementById('attack-type-breakdown'),
         scoreUs: document.getElementById('score-us'),
         scoreOpponent: document.getElementById('score-opponent'),
         statAttackEfficiency: document.getElementById('stat-attack-efficiency'),
@@ -409,7 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const x = ((clientX - rect.left) / rect.width) * 100;
         const y = ((clientY - rect.top) / rect.height) * 100;
 
-        state.currentDraftShot = { id: Date.now(), x, y, mode: state.mode, result: null, player: null, time: state.timer.seconds, gk: state.currentGk, period: state.period };
+        state.currentDraftShot = { id: Date.now(), x, y, mode: state.mode, result: null, player: null, time: state.timer.seconds, gk: state.currentGk, period: state.period, attackType: 'set' };
         openModal();
     }
 
@@ -420,8 +421,22 @@ document.addEventListener('DOMContentLoaded', () => {
         // Reset player step for normal shot flow
         ui.playerStepTitle.textContent = '選手を選択';
         ui.btnSkipPlayer.style.display = 'none';
+        // Reset attack type chips to default
+        document.querySelectorAll('.atk-chip').forEach(c => {
+            c.classList.toggle('selected', c.getAttribute('data-atk') === 'set');
+        });
         populatePlayerStep();
     }
+
+    // Attack type chip handlers
+    document.querySelectorAll('.atk-chip').forEach(chip => {
+        chip.addEventListener('click', (e) => {
+            const type = e.target.getAttribute('data-atk');
+            document.querySelectorAll('.atk-chip').forEach(c => c.classList.remove('selected'));
+            e.target.classList.add('selected');
+            if (state.currentDraftShot) state.currentDraftShot.attackType = type;
+        });
+    });
 
     window.closeModal = function() {
         ui.modal.classList.add('hidden');
@@ -458,6 +473,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function addShotAndClose() {
+        // 7m attempts always plot on the 7m line center (regardless of where user tapped)
+        if (state.currentDraftShot.attackType === '7m' && state.currentDraftShot.x != null) {
+            state.currentDraftShot.x = 50;
+            state.currentDraftShot.y = 53;
+        }
+
         state.shots.push(state.currentDraftShot);
 
         if (state.currentDraftShot.result === 'goal') {
@@ -703,6 +724,30 @@ document.addEventListener('DOMContentLoaded', () => {
             ui.periodBreakdown.innerHTML =
                 `<div style="margin-bottom:4px;"><strong style="color:var(--primary);">前半</strong>: ${fmt(halves[1])}</div>` +
                 `<div><strong style="color:#9b59b6;">後半</strong>: ${fmt(halves[2])}</div>`;
+        }
+
+        // ── 攻撃種別ブレイクダウン（自チームのみ） ──
+        if (ui.attackTypeBreakdown) {
+            const types = {
+                set:  { label: 'セット',  color: 'var(--primary)',  goals: 0, shots: 0 },
+                fast: { label: '速攻',    color: 'var(--success)',  goals: 0, shots: 0 },
+                '7m': { label: '7m',      color: 'var(--save)',     goals: 0, shots: 0 }
+            };
+            let untagged = 0;
+            state.shots.forEach(s => {
+                if (s.mode !== 'attack') return;
+                if (s.result === 'turnover') return;
+                const t = s.attackType;
+                if (!types[t]) { untagged++; return; }
+                types[t].shots++;
+                if (s.result === 'goal') types[t].goals++;
+            });
+            const cells = Object.entries(types).map(([key, t]) => {
+                const rate = t.shots === 0 ? '-' : `${Math.round((t.goals/t.shots)*100)}%`;
+                return `<div><strong style="color:${t.color};">${t.label}</strong>: ${t.goals}/${t.shots} (${rate})</div>`;
+            }).join('');
+            const untaggedNote = untagged > 0 ? `<div style="color:#666; font-size:0.8em; margin-top:3px;">未分類: ${untagged}</div>` : '';
+            ui.attackTypeBreakdown.innerHTML = `<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">${cells}</div>${untaggedNote}`;
         }
 
         // ── C2: 選手別テーブル（シュート数列追加） ──

@@ -488,6 +488,40 @@ body {
     pointer-events: none;
 }
 
+/* Attack type chips on result modal */
+.attack-type-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+.atk-chip {
+    flex: 1;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+.atk-chip.selected {
+    background: rgba(52, 152, 219, 0.35);
+    border-color: var(--primary);
+    color: #fff;
+    box-shadow: 0 0 6px rgba(52, 152, 219, 0.4);
+}
+.atk-chip[data-atk="fast"].selected {
+    background: rgba(46, 204, 113, 0.35);
+    border-color: var(--success);
+    box-shadow: 0 0 6px rgba(46, 204, 113, 0.4);
+}
+.atk-chip[data-atk="7m"].selected {
+    background: rgba(241, 196, 15, 0.35);
+    border-color: var(--save);
+    box-shadow: 0 0 6px rgba(241, 196, 15, 0.4);
+}
+
 .summary-content {
     background: rgba(25, 30, 45, 0.85);
     backdrop-filter: blur(20px);

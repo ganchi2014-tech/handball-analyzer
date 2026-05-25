@@ -12,7 +12,7 @@
     <meta name="application-name" content="ハンド分析">
     
     <title>Handball Analyzer</title>
-    <link rel="stylesheet" href="styles.css?v=7">
+    <link rel="stylesheet" href="styles.css?v=8">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -56,9 +56,14 @@
         <div class="mode-toggle">
             <input type="radio" id="mode-attack" name="mode" value="attack" checked>
             <label for="mode-attack" class="toggle-btn attack-btn">オフェンス (自のシュート)</label>
-            
+
             <input type="radio" id="mode-defense" name="mode" value="defense">
             <label for="mode-defense" class="toggle-btn defense-btn">ディフェンス (相手のシュート)</label>
+        </div>
+
+        <!-- Input Mode Toggle -->
+        <div class="input-mode-row">
+            <button type="button" id="input-mode-chip" class="input-mode-chip" data-input="swipe">👆 スワイプ入力</button>
         </div>
 
         <!-- Court Map (SVG) -->
@@ -83,7 +88,7 @@
             
             <!-- Instructions overlay (Fades out when interacted) -->
             <div id="court-instruction" class="instruction-overlay">
-                コートをタップしてシュートを記録
+                <span id="instruction-text">↑ゴール / ←→セーブ / ↓ミス　（タップで詳細）</span>
             </div>
         </div>
 
@@ -288,6 +293,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=7"></script>
+    <script src="app.js?v=8"></script>
 </body>
 </html>

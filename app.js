@@ -9,10 +9,12 @@ document.addEventListener('DOMContentLoaded', () => {
         rsFilter: 'all',
         lineup: [],            // 出場中の選手名（最大6名、GKを除く）
         lineupEditTemp: [],    // 編集モーダルの一時状態
-        period: 1              // 1=前半, 2=後半
+        period: 1,             // 1=前半, 2=後半
+        inputMode: 'swipe'     // 'swipe' or 'modal'
     };
 
     const LINEUP_MAX = 6;
+    const SWIPE_THRESHOLD_PX = 25;
 
     const ui = {
         app: document.getElementById('app'),
@@ -46,6 +48,8 @@ document.addEventListener('DOMContentLoaded', () => {
         periodBreakdown: document.getElementById('period-breakdown'),
         attackTypeBreakdown: document.getElementById('attack-type-breakdown'),
         courseBreakdown: document.getElementById('course-breakdown'),
+        inputModeChip: document.getElementById('input-mode-chip'),
+        instructionText: document.getElementById('instruction-text'),
         scoreUs: document.getElementById('score-us'),
         scoreOpponent: document.getElementById('score-opponent'),
         statAttackEfficiency: document.getElementById('stat-attack-efficiency'),
@@ -92,6 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentGk: state.currentGk,
                 lineup: state.lineup,
                 period: state.period,
+                inputMode: state.inputMode,
                 matchDate: ui.dateInput.value,
                 matchOpponent: ui.opponentInput.value,
                 savedAt: Date.now()
@@ -119,6 +124,8 @@ document.addEventListener('DOMContentLoaded', () => {
             state.lineup = Array.isArray(snap.lineup) ? snap.lineup.filter(p => playerPositions.includes(p)) : [];
             state.period = (snap.period === 2) ? 2 : 1;
             applyPeriodToUI();
+            state.inputMode = snap.inputMode === 'modal' ? 'modal' : 'swipe';
+            applyInputModeToUI();
 
             if (snap.matchDate) ui.dateInput.value = snap.matchDate;
             if (snap.matchOpponent) ui.opponentInput.value = snap.matchOpponent;
@@ -396,26 +403,106 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Court interactions
-    ui.courtContainer.addEventListener('touchstart', handleCourtTap, {passive: false});
-    ui.courtContainer.addEventListener('mousedown', handleCourtTap);
+    // ── Court interactions (swipe or tap to record) ──
+    let pointerStart = null;
 
-    function handleCourtTap(e) {
-        if(e.type === 'touchstart') e.preventDefault();
-        ui.instruction.style.opacity = '0';
-        
-        const rect = ui.courtContainer.getBoundingClientRect();
-        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-        
-        if (!clientX || !clientY) return;
-
-        const x = ((clientX - rect.left) / rect.width) * 100;
-        const y = ((clientY - rect.top) / rect.height) * 100;
-
-        state.currentDraftShot = { id: Date.now(), x, y, mode: state.mode, result: null, player: null, time: state.timer.seconds, gk: state.currentGk, period: state.period, attackType: 'set' };
-        openModal();
+    function getEventCoords(e, phase) {
+        if (phase === 'end' && e.changedTouches && e.changedTouches[0]) {
+            return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+        }
+        if (e.touches && e.touches[0]) {
+            return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+        return { x: e.clientX, y: e.clientY };
     }
+
+    function onCourtDown(e) {
+        if (e.type === 'touchstart') e.preventDefault();
+        const c = getEventCoords(e, 'start');
+        if (c.x == null || c.y == null) return;
+        pointerStart = c;
+    }
+
+    function onCourtUp(e) {
+        if (!pointerStart) return;
+        if (e.type === 'touchend') e.preventDefault();
+        const c = getEventCoords(e, 'end');
+        const dx = c.x - pointerStart.x;
+        const dy = c.y - pointerStart.y;
+        const dist = Math.hypot(dx, dy);
+        const startCoords = pointerStart;
+        pointerStart = null;
+
+        const rect = ui.courtContainer.getBoundingClientRect();
+        const xPct = ((startCoords.x - rect.left) / rect.width) * 100;
+        const yPct = ((startCoords.y - rect.top) / rect.height) * 100;
+        if (xPct < 0 || xPct > 100 || yPct < 0 || yPct > 100) return;
+
+        ui.instruction.style.opacity = '0';
+
+        state.currentDraftShot = {
+            id: Date.now(), x: xPct, y: yPct,
+            mode: state.mode, result: null, player: null,
+            time: state.timer.seconds, gk: state.currentGk,
+            period: state.period, attackType: 'set'
+        };
+
+        // Swipe path: result decided by gesture direction, modal opens at next-needed step
+        if (state.inputMode === 'swipe' && dist >= SWIPE_THRESHOLD_PX) {
+            let result;
+            if (Math.abs(dx) > Math.abs(dy)) result = 'save';
+            else if (dy < 0) result = 'goal';
+            else result = 'miss';
+            state.currentDraftShot.result = result;
+
+            // Open modal but jump past step-result
+            openModal();
+            ui.stepResult.classList.add('hidden');
+
+            if (result === 'goal' || result === 'save') {
+                ui.stepCourse.classList.remove('hidden');
+            } else if (state.mode === 'attack') {
+                ui.stepPlayer.classList.remove('hidden');
+            } else {
+                ui.modal.classList.add('hidden');
+                addShotAndClose();
+            }
+        } else {
+            // Tap (or swipe disabled): full modal
+            openModal();
+        }
+    }
+
+    function onCourtCancel() {
+        pointerStart = null;
+    }
+
+    ui.courtContainer.addEventListener('touchstart', onCourtDown, { passive: false });
+    ui.courtContainer.addEventListener('touchend', onCourtUp, { passive: false });
+    ui.courtContainer.addEventListener('touchcancel', onCourtCancel);
+    ui.courtContainer.addEventListener('mousedown', onCourtDown);
+    ui.courtContainer.addEventListener('mouseup', onCourtUp);
+    ui.courtContainer.addEventListener('mouseleave', onCourtCancel);
+
+    // ── Input mode toggle ──
+    function applyInputModeToUI() {
+        ui.inputModeChip.setAttribute('data-input', state.inputMode);
+        ui.inputModeChip.textContent = state.inputMode === 'swipe' ? '👆 スワイプ入力' : '📋 タップ入力';
+        if (ui.instructionText) {
+            ui.instructionText.textContent = state.inputMode === 'swipe'
+                ? '↑ゴール / ←→セーブ / ↓ミス　（タップで詳細）'
+                : 'コートをタップしてシュートを記録';
+        }
+    }
+
+    ui.inputModeChip.addEventListener('click', () => {
+        state.inputMode = state.inputMode === 'swipe' ? 'modal' : 'swipe';
+        applyInputModeToUI();
+        saveState();
+        showToast(state.inputMode === 'swipe' ? '👆 スワイプ入力に切替' : '📋 タップ入力に切替');
+    });
+
+    applyInputModeToUI();
 
     function openModal() {
         ui.modal.classList.remove('hidden');

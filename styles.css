@@ -488,6 +488,28 @@ body {
     pointer-events: none;
 }
 
+/* Input mode chip */
+.input-mode-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: -8px;
+}
+.input-mode-chip {
+    background: rgba(46, 204, 113, 0.18);
+    border: 1px solid rgba(46, 204, 113, 0.5);
+    color: #d4f5dd;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.input-mode-chip[data-input="modal"] {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--border-color);
+    color: var(--text-muted);
+}
+
 /* Course breakdown in summary (mini 2x2 goal per mode) */
 .course-breakdown-row {
     display: grid;

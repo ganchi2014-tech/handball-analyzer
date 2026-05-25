@@ -145,11 +145,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 ui.btnSaveText.textContent = '🟡 相手GKセーブ';
             }
 
-            // GK button active state
-            ui.gkBtns.forEach(b => {
-                if (b.getAttribute('data-gk') === state.currentGk) b.classList.add('active');
-                else b.classList.remove('active');
-            });
+            // GK row (re-render to reflect restored currentGk)
+            if (typeof renderGkRow === 'function') renderGkRow();
 
             updateScoreDOM();
             updateTimer();
@@ -180,22 +177,83 @@ document.addEventListener('DOMContentLoaded', () => {
     ui.dateInput.addEventListener('change', saveState);
     ui.opponentInput.addEventListener('input', saveState);
 
-    // GK Toggle logic
-    ui.gkBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            ui.gkBtns.forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            state.currentGk = e.target.getAttribute('data-gk');
-            saveState();
+    // ── GK row: rendered from roster ──
+    const gkContainer = document.getElementById('gk-toggle-container');
+    function renderGkRow() {
+        // Remove existing buttons (keep label)
+        gkContainer.querySelectorAll('.gk-btn').forEach(b => b.remove());
+        const gks = getGkShortNames();
+        // Ensure currentGk is valid
+        if (gks.length > 0 && !gks.includes(state.currentGk)) {
+            state.currentGk = gks[0];
+        }
+        gks.forEach(short => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'gk-btn';
+            if (short === state.currentGk) btn.classList.add('active');
+            btn.setAttribute('data-gk', short);
+            btn.textContent = short;
+            btn.addEventListener('click', () => {
+                state.currentGk = short;
+                gkContainer.querySelectorAll('.gk-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                saveState();
+            });
+            gkContainer.appendChild(btn);
         });
-    });
+    }
+    // renderGkRow() is called after roster is loaded (below)
 
-    // Player roster
-    const playerPositions = [
+    // ── Roster (loadable, editable) ──
+    const ROSTER_KEY = 'handball-analyzer-roster-v1';
+    const DEFAULT_GKS_SHORT = ['桑原', '杉本', '小川', '田口', '関山'];
+    const DEFAULT_PLAYER_NAMES = [
         '③赤塚', '③岩噌', '③川崎', '③北村', '③辻', '③中田', '③伴', '③山本', '③桑原', '③杉本',
         '②新井', '②猪田', '②北林', '②田端', '②藤川', '②松岡', '②村田', '②安田', '②小川', '②田口',
         '①石黒', '①岩噌', '①大野', '①北川', '①嶌本', '①福原', '①増田', '①水田', '①宮崎', '①森井', '①山崎', '①関山'
     ];
+    function stripGradePrefix(name) { return name.replace(/^[①②③]/, ''); }
+    function makeDefaultRoster() {
+        return DEFAULT_PLAYER_NAMES.map(name => ({
+            name,
+            isGK: DEFAULT_GKS_SHORT.includes(stripGradePrefix(name))
+        }));
+    }
+
+    function loadRoster() {
+        try {
+            const raw = localStorage.getItem(ROSTER_KEY);
+            if (!raw) return makeDefaultRoster();
+            const arr = JSON.parse(raw);
+            if (!Array.isArray(arr) || arr.length === 0) return makeDefaultRoster();
+            return arr.map(item => {
+                if (typeof item === 'string') return { name: item, isGK: false };
+                if (item && typeof item.name === 'string') {
+                    return { name: item.name, isGK: !!item.isGK };
+                }
+                return null;
+            }).filter(Boolean);
+        } catch (e) {
+            console.warn('loadRoster failed', e);
+            return makeDefaultRoster();
+        }
+    }
+
+    function saveRoster() {
+        try { localStorage.setItem(ROSTER_KEY, JSON.stringify(state.roster)); }
+        catch (e) { console.warn('saveRoster failed', e); }
+    }
+
+    state.roster = loadRoster();
+    let playerPositions = state.roster.map(p => p.name);
+    function refreshRosterDerivatives() {
+        playerPositions = state.roster.map(p => p.name);
+    }
+    function getGkShortNames() {
+        return state.roster.filter(p => p.isGK).map(p => stripGradePrefix(p.name));
+    }
+    renderGkRow();
 
     function createPlayerBtn(pos, onClick) {
         const btn = document.createElement('button');
@@ -1168,6 +1226,316 @@ document.addEventListener('DOMContentLoaded', () => {
     const adjustHeight = () => { ui.app.style.height = `${window.innerHeight}px`; };
     window.addEventListener('resize', adjustHeight);
     adjustHeight();
+
+    // ── Settings modal (roster + data management) ──
+    const ui_settings = {
+        modal: document.getElementById('settings-modal'),
+        rosterList: document.getElementById('roster-list'),
+        rosterCount: document.getElementById('roster-count'),
+        rosterGkCount: document.getElementById('roster-gk-count'),
+        newGrade: document.getElementById('new-player-grade'),
+        newName: document.getElementById('new-player-name'),
+        newGk: document.getElementById('new-player-gk'),
+        btnAdd: document.getElementById('btn-add-player'),
+        btnReset: document.getElementById('btn-reset-roster'),
+        btnExportCurrent: document.getElementById('btn-export-current-csv'),
+        btnExportAll: document.getElementById('btn-export-all-csv'),
+        btnFinishMatch: document.getElementById('btn-finish-match'),
+        btnOpen: document.getElementById('btn-settings')
+    };
+
+    function renderRosterEditor() {
+        ui_settings.rosterList.innerHTML = '';
+        state.roster.forEach((player, idx) => {
+            const row = document.createElement('div');
+            row.className = 'roster-edit-row';
+            row.innerHTML = `
+                <span class="player-name">${player.name}</span>
+                <span></span>
+                <button type="button" class="gk-toggle-btn ${player.isGK ? '' : 'inactive'}">GK</button>
+                <button type="button" class="delete-btn">削除</button>
+            `;
+            row.querySelector('.gk-toggle-btn').addEventListener('click', () => {
+                state.roster[idx].isGK = !state.roster[idx].isGK;
+                saveRoster();
+                refreshRosterDerivatives();
+                renderRosterEditor();
+                renderGkRow();
+            });
+            row.querySelector('.delete-btn').addEventListener('click', () => {
+                if (!confirm(`「${player.name}」を名簿から削除しますか？\n（過去の試合データは保持されます）`)) return;
+                state.roster.splice(idx, 1);
+                saveRoster();
+                refreshRosterDerivatives();
+                // If this player was in lineup, remove from lineup
+                state.lineup = state.lineup.filter(p => p !== player.name);
+                saveState();
+                renderRosterEditor();
+                renderGkRow();
+                populatePlayerStep();
+            });
+            ui_settings.rosterList.appendChild(row);
+        });
+        ui_settings.rosterCount.textContent = state.roster.length;
+        ui_settings.rosterGkCount.textContent = state.roster.filter(p => p.isGK).length;
+    }
+
+    function openSettingsModal() {
+        renderRosterEditor();
+        ui_settings.modal.classList.remove('hidden');
+    }
+    window.closeSettingsModal = function() {
+        ui_settings.modal.classList.add('hidden');
+    };
+    ui_settings.btnOpen.addEventListener('click', openSettingsModal);
+
+    ui_settings.btnAdd.addEventListener('click', () => {
+        const nameTxt = ui_settings.newName.value.trim();
+        if (!nameTxt) { showToast('⚠ 選手名を入力'); return; }
+        const fullName = ui_settings.newGrade.value + nameTxt;
+        if (state.roster.some(p => p.name === fullName)) {
+            showToast('⚠ 同じ名前が既に存在'); return;
+        }
+        state.roster.push({ name: fullName, isGK: ui_settings.newGk.checked });
+        saveRoster();
+        refreshRosterDerivatives();
+        ui_settings.newName.value = '';
+        ui_settings.newGk.checked = false;
+        renderRosterEditor();
+        renderGkRow();
+        populatePlayerStep();
+        showToast(`✅ ${fullName} 追加`);
+    });
+
+    ui_settings.btnReset.addEventListener('click', () => {
+        if (!confirm('名簿をデフォルト（初期メンバー32名）に戻します。よろしいですか？\n（試合データは消えません）')) return;
+        state.roster = makeDefaultRoster();
+        saveRoster();
+        refreshRosterDerivatives();
+        renderRosterEditor();
+        renderGkRow();
+        populatePlayerStep();
+        showToast('✅ 名簿をリセット');
+    });
+
+    attachSwipeDownClose(ui_settings.modal, () => window.closeSettingsModal());
+
+    // ── Match history + CSV export ──
+    const HISTORY_KEY = 'handball-analyzer-history-v1';
+    const CSV_HEADERS = ['date', 'opponent', 'period', 'time_s', 'mode', 'result',
+                         'attack_type', 'course', 'player', 'gk', 'to_reason', 'x', 'y'];
+
+    const ui_hist = {
+        modal: document.getElementById('history-modal'),
+        list: document.getElementById('history-list-container'),
+        empty: document.getElementById('history-empty'),
+        btnOpen: document.getElementById('btn-open-history'),
+        btnExportAll: document.getElementById('btn-export-all-csv'),
+        countSpan: document.getElementById('history-count')
+    };
+
+    function loadHistory() {
+        try {
+            const raw = localStorage.getItem(HISTORY_KEY);
+            const arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) { return []; }
+    }
+    function saveHistory(history) {
+        try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); }
+        catch (e) { console.warn('saveHistory failed', e); }
+    }
+
+    function updateHistoryCount() {
+        ui_hist.countSpan.textContent = loadHistory().length;
+    }
+
+    function archiveCurrentMatch() {
+        if (state.shots.length === 0) return null;
+        const match = {
+            id: Date.now(),
+            date: ui.dateInput.value || '',
+            opponent: ui.opponentInput.value || '',
+            score: { us: state.score.us, opponent: state.score.opponent },
+            shots: state.shots.map(s => ({ ...s })),
+            timerSeconds: state.timer.seconds,
+            archivedAt: Date.now()
+        };
+        const history = loadHistory();
+        history.unshift(match);
+        saveHistory(history);
+        return match;
+    }
+
+    function clearCurrentMatch() {
+        state.shots = [];
+        state.score = { us: 0, opponent: 0 };
+        clearInterval(state.timer.interval);
+        state.timer = { running: false, seconds: 0, interval: null };
+        state.period = 1;
+        applyPeriodToUI();
+        ui.timerToggle.textContent = '▶';
+        updateTimer();
+        updateScoreDOM();
+        renderPlots();
+        calculateStats();
+        ui.opponentInput.value = '';
+        const today = new Date();
+        const offset = today.getTimezoneOffset() * 60000;
+        ui.dateInput.value = new Date(today.getTime() - offset).toISOString().slice(0, 10);
+        saveState();
+    }
+
+    ui_settings.btnFinishMatch.addEventListener('click', () => {
+        if (state.shots.length === 0) {
+            showToast('⚠ 記録されたシュートがありません');
+            return;
+        }
+        if (!confirm(`現在の試合（${state.shots.length} 件）を履歴に保存して新規試合を開始します。\nよろしいですか？`)) return;
+        const match = archiveCurrentMatch();
+        clearCurrentMatch();
+        updateHistoryCount();
+        showToast(`✅ 「${match.date} vs ${match.opponent || '対戦相手'}」を保存`);
+        window.closeSettingsModal();
+    });
+
+    // ── CSV export ──
+    function csvEscape(v) {
+        const s = v == null ? '' : String(v);
+        return /[,"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    }
+    function shotToCsvRow(s, match) {
+        return [
+            match.date || '', match.opponent || '',
+            s.period == null ? '' : s.period,
+            s.time == null ? '' : s.time,
+            s.mode || '', s.result || '',
+            s.attackType || '', s.course || '',
+            s.player || '', s.gk || '', s.toReason || '',
+            s.x == null ? '' : Number(s.x).toFixed(2),
+            s.y == null ? '' : Number(s.y).toFixed(2)
+        ];
+    }
+    function matchToCsv(match) {
+        const lines = [CSV_HEADERS.map(csvEscape).join(',')];
+        (match.shots || []).forEach(s => {
+            lines.push(shotToCsvRow(s, match).map(csvEscape).join(','));
+        });
+        return lines.join('\n');
+    }
+    function downloadCsv(filename, content) {
+        const bom = String.fromCharCode(0xFEFF); // BOM so Excel reads UTF-8 correctly
+        const blob = new Blob([bom + content], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            try { document.body.removeChild(a); } catch (e) {}
+            URL.revokeObjectURL(url);
+        }, 100);
+    }
+    function safeFilenamePart(s) {
+        return String(s || '').replace(/[\/\\?%*:|"<>]/g, '_').slice(0, 40);
+    }
+    function exportMatchCsv(match) {
+        if (!match.shots || match.shots.length === 0) {
+            showToast('⚠ シュート記録がありません'); return;
+        }
+        const filename = `handball_${safeFilenamePart(match.date || 'undated')}_${safeFilenamePart(match.opponent || 'match')}.csv`;
+        downloadCsv(filename, matchToCsv(match));
+        showToast('📥 CSV保存しました');
+    }
+    ui_settings.btnExportCurrent.addEventListener('click', () => {
+        exportMatchCsv({
+            date: ui.dateInput.value,
+            opponent: ui.opponentInput.value,
+            shots: state.shots
+        });
+    });
+
+    // ── History modal ──
+    function computeMatchQuickStats(match) {
+        let attShots = 0, attGoals = 0, attTO = 0;
+        (match.shots || []).forEach(s => {
+            if (s.mode === 'attack') {
+                if (s.result === 'turnover') attTO++;
+                else attShots++;
+                if (s.result === 'goal') attGoals++;
+            }
+        });
+        const denom = attShots + attTO;
+        const attackEfficiency = denom === 0 ? 0 : Math.round((attGoals / denom) * 100);
+        return { attShots, attGoals, attTO, attackEfficiency };
+    }
+    function renderHistoryList() {
+        const history = loadHistory();
+        ui_hist.list.innerHTML = '';
+        if (history.length === 0) {
+            ui_hist.empty.classList.remove('hidden');
+            return;
+        }
+        ui_hist.empty.classList.add('hidden');
+        history.forEach(match => {
+            const stats = computeMatchQuickStats(match);
+            const row = document.createElement('div');
+            row.className = 'history-entry';
+            row.innerHTML = `
+                <div class="history-row-top">
+                    <div class="history-meta">
+                        <div class="history-date">${match.date || '(日付未設定)'}</div>
+                        <div class="history-opponent">vs ${match.opponent || '(対戦相手未入力)'}</div>
+                    </div>
+                    <div class="history-score">${match.score.us} - ${match.score.opponent}</div>
+                </div>
+                <div class="history-row-stats">
+                    ST: ${stats.attShots} / TO: ${stats.attTO} / 攻撃効率: ${stats.attackEfficiency}%
+                </div>
+                <div class="history-row-actions">
+                    <button type="button" class="btn-secondary-mini" data-action="csv">📥 CSV</button>
+                    <button type="button" class="btn-secondary-mini delete" data-action="delete">🗑 削除</button>
+                </div>
+            `;
+            row.querySelector('[data-action="csv"]').addEventListener('click', () => exportMatchCsv(match));
+            row.querySelector('[data-action="delete"]').addEventListener('click', () => {
+                if (!confirm(`この試合（${match.date} vs ${match.opponent}）を履歴から削除しますか？`)) return;
+                const filtered = loadHistory().filter(m => m.id !== match.id);
+                saveHistory(filtered);
+                updateHistoryCount();
+                renderHistoryList();
+                showToast('🗑 削除しました');
+            });
+            ui_hist.list.appendChild(row);
+        });
+    }
+
+    function openHistoryModal() {
+        renderHistoryList();
+        ui_hist.modal.classList.remove('hidden');
+    }
+    window.closeHistoryModal = function() { ui_hist.modal.classList.add('hidden'); };
+
+    ui_hist.btnOpen.addEventListener('click', openHistoryModal);
+
+    ui_hist.btnExportAll.addEventListener('click', () => {
+        const history = loadHistory();
+        if (history.length === 0) { showToast('⚠ 履歴がありません'); return; }
+        const lines = [CSV_HEADERS.map(csvEscape).join(',')];
+        history.forEach(match => {
+            (match.shots || []).forEach(s => {
+                lines.push(shotToCsvRow(s, match).map(csvEscape).join(','));
+            });
+        });
+        const filename = `handball_all_${new Date().toISOString().slice(0,10)}.csv`;
+        downloadCsv(filename, lines.join('\n'));
+        showToast('📥 全試合CSV保存');
+    });
+
+    attachSwipeDownClose(ui_hist.modal, () => window.closeHistoryModal());
+
+    updateHistoryCount();
 
     // ── Restore saved data on load ──
     const hadData = loadState();

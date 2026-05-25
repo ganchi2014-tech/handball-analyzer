@@ -12,7 +12,7 @@
     <meta name="application-name" content="ハンド分析">
     
     <title>Handball Analyzer</title>
-    <link rel="stylesheet" href="styles.css?v=11">
+    <link rel="stylesheet" href="styles.css?v=12">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -23,6 +23,7 @@
             <input type="date" id="match-date" class="info-input">
             <span class="vs">VS</span>
             <input type="text" id="match-opponent" class="info-input" placeholder="対戦相手を入力">
+            <button type="button" id="btn-settings" class="settings-btn" title="設定">⚙</button>
         </div>
 
         <!-- Header -->
@@ -45,11 +46,7 @@
         <!-- GK Toggle (出場GK切り替え) -->
         <div class="gk-toggle" id="gk-toggle-container">
             <span class="gk-label">GK:</span>
-            <button class="gk-btn active" data-gk="桑原">桑原</button>
-            <button class="gk-btn" data-gk="杉本">杉本</button>
-            <button class="gk-btn" data-gk="小川">小川</button>
-            <button class="gk-btn" data-gk="田口">田口</button>
-            <button class="gk-btn" data-gk="関山">関山</button>
+            <!-- buttons populated by JS from roster -->
         </div>
 
         <!-- Mode Toggle -->
@@ -200,6 +197,53 @@
         </div>
     </div>
 
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay hidden" style="z-index:160;">
+        <div class="modal-content">
+            <div class="modal-drag-handle"></div>
+            <h3>設定</h3>
+
+            <div class="settings-section">
+                <h4>名簿 <span class="section-meta">(<span id="roster-count">0</span>名 / GK <span id="roster-gk-count">0</span>名)</span></h4>
+                <div id="roster-list" class="roster-edit-list"></div>
+                <div class="add-player-row">
+                    <select id="new-player-grade" class="grade-select">
+                        <option value="①">①</option>
+                        <option value="②">②</option>
+                        <option value="③">③</option>
+                    </select>
+                    <input type="text" id="new-player-name" placeholder="選手名" maxlength="8">
+                    <label class="gk-checkbox-label">
+                        <input type="checkbox" id="new-player-gk"> GK
+                    </label>
+                    <button type="button" id="btn-add-player" class="btn-primary-mini">追加</button>
+                </div>
+                <button type="button" id="btn-reset-roster" class="btn-secondary">名簿をデフォルトに戻す</button>
+            </div>
+
+            <div class="settings-section">
+                <h4>データ管理</h4>
+                <button type="button" id="btn-export-current-csv" class="btn-secondary">📥 現在試合をCSV保存</button>
+                <button type="button" id="btn-open-history" class="btn-secondary">📚 試合履歴 (<span id="history-count">0</span>)</button>
+                <button type="button" id="btn-finish-match" class="btn-secondary" style="border-color: var(--success); color: #d4f5dd;">🏁 試合を履歴に保存して新規開始</button>
+            </div>
+
+            <button class="btn-cancel" onclick="closeSettingsModal()">閉じる</button>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div id="history-modal" class="modal-overlay hidden" style="z-index:170;">
+        <div class="modal-content">
+            <div class="modal-drag-handle"></div>
+            <h3>試合履歴</h3>
+            <div id="history-empty" class="history-empty hidden">まだ保存された試合はありません</div>
+            <div id="history-list-container" class="history-list"></div>
+            <button type="button" id="btn-export-all-csv" class="btn-secondary">📥 全試合まとめてCSV</button>
+            <button class="btn-cancel" onclick="closeHistoryModal()">閉じる</button>
+        </div>
+    </div>
+
     <!-- Lineup Edit Modal (live swap, no save button) -->
     <div id="lineup-modal" class="modal-overlay hidden" style="z-index:150;">
         <div class="modal-content">
@@ -327,6 +371,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=11"></script>
+    <script src="app.js?v=12"></script>
 </body>
 </html>

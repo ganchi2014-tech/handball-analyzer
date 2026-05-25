@@ -1341,10 +1341,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Check iOS Safari to avoid bottom bar overlap
-    const adjustHeight = () => { ui.app.style.height = `${window.innerHeight}px`; };
-    window.addEventListener('resize', adjustHeight);
-    adjustHeight();
+    // Note: app height is handled in CSS via 100dvh (dynamic viewport height).
+    // We no longer set a fixed px height here — that caused court size to vary
+    // depending on whether the iOS Safari URL bar was visible at load time.
 
     // ── Settings modal (roster + data management) ──
     const ui_settings = {

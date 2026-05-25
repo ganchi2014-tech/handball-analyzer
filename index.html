@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- アプリ化（ホーム画面に追加）のための設定 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ハンド分析">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="ハンド分析">
+    
+    <title>Handball Analyzer</title>
+    <link rel="stylesheet" href="styles.css?v=2">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+    <div id="app" class="attack-mode">
+        <!-- Match Info -->
+        <div class="match-info">
+            <input type="date" id="match-date" class="info-input">
+            <span class="vs">VS</span>
+            <input type="text" id="match-opponent" class="info-input" placeholder="対戦相手を入力">
+        </div>
+
+        <!-- Header -->
+        <header class="scoreboard">
+            <div class="team our-team">
+                <span class="team-name">自チーム</span>
+                <span class="score" id="score-us">0</span>
+            </div>
+            <div class="timer">
+                <div id="time-display">00:00</div>
+                <button id="timer-toggle">▶</button>
+            </div>
+            <div class="team opponent-team">
+                <span class="score" id="score-opponent">0</span>
+                <span class="team-name">相手</span>
+            </div>
+        </header>
+
+        <!-- GK Toggle (出場GK切り替え) -->
+        <div class="gk-toggle" id="gk-toggle-container">
+            <span class="gk-label">GK:</span>
+            <button class="gk-btn active" data-gk="桑原">桑原</button>
+            <button class="gk-btn" data-gk="杉本">杉本</button>
+            <button class="gk-btn" data-gk="小川">小川</button>
+            <button class="gk-btn" data-gk="田口">田口</button>
+            <button class="gk-btn" data-gk="関山">関山</button>
+        </div>
+
+        <!-- Mode Toggle -->
+        <div class="mode-toggle">
+            <input type="radio" id="mode-attack" name="mode" value="attack" checked>
+            <label for="mode-attack" class="toggle-btn attack-btn">オフェンス (自のシュート)</label>
+            
+            <input type="radio" id="mode-defense" name="mode" value="defense">
+            <label for="mode-defense" class="toggle-btn defense-btn">ディフェンス (相手のシュート)</label>
+        </div>
+
+        <!-- Court Map (SVG) -->
+        <div class="court-container" id="court-container">
+            <svg class="court-svg" viewBox="0 0 400 300" preserveAspectRatio="none">
+                <!-- Court Area -->
+                <rect x="0" y="0" width="400" height="300" fill="rgba(0,0,0,0.3)" />
+                <!-- Goal line -->
+                <line x1="150" y1="300" x2="250" y2="300" stroke="#ffffff" stroke-width="4"/>
+                <rect x="150" y="300" width="100" height="5" fill="#ff4757"/>
+                
+                <!-- 6m Line Area -->
+                <path d="M 50 300 A 120 120 0 0 1 170 180 L 230 180 A 120 120 0 0 1 350 300" fill="rgba(255,255,255,0.08)" stroke="#ffffff" stroke-width="2"/>
+                
+                <!-- 9m Line -->
+                <path d="M -10 300 A 180 180 0 0 1 170 120 L 230 120 A 180 180 0 0 1 410 300" fill="transparent" stroke="rgba(255,255,255,0.5)" stroke-dasharray="10, 10" stroke-width="2"/>
+                
+                <!-- 7m Line -->
+                <line x1="190" y1="160" x2="210" y2="160" stroke="#ffffff" stroke-width="3"/>
+            </svg>
+            <div id="plots-container"></div>
+            
+            <!-- Instructions overlay (Fades out when interacted) -->
+            <div id="court-instruction" class="instruction-overlay">
+                コートをタップしてシュートを記録
+            </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div class="dashboard">
+            <div class="stat-card">
+                <div class="stat-title" id="stat-efficiency-title">攻撃効率</div>
+                <div class="stat-value" id="stat-attack-efficiency">0%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title" id="stat-accuracy-title">ST決定率</div>
+                <div class="stat-value" id="stat-shot-accuracy">0%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">GKセーブ率</div>
+                <div class="stat-value" id="stat-gk-save-rate">0%</div>
+            </div>
+        </div>
+        
+        <!-- Controls -->
+        <div class="controls">
+            <button class="btn-action btn-turnover" id="btn-turnover">💨 ミス(TO)</button>
+            <button class="btn-action btn-undo" id="btn-undo">↩ 戻す</button>
+            <button class="btn-action btn-data" id="btn-data">📊 データ</button>
+            <button class="btn-action btn-reset" id="btn-reset">↺ リセット</button>
+        </div>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="toast"></div>
+    </div>
+
+    <!-- Action Action Sheet Modal -->
+    <div id="action-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3 id="modal-title">シュート結果</h3>
+            
+            <!-- Step 1: Result Selection -->
+            <div id="step-result" class="step">
+                <button class="action-btn success-btn" data-result="goal">🟢 ゴール (得点)</button>
+                <button class="action-btn save-btn" data-result="save" id="btn-save-text">🟡 相手GKセーブ</button>
+                <button class="action-btn miss-btn" data-result="miss" id="btn-miss-text">⚪ ミス (枠外/ポスト)</button>
+                <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+            </div>
+            
+            <!-- Step 2: Player Selection -->
+            <div id="step-player" class="step hidden">
+                <h3 id="player-step-title">ポジション(選手)を選択</h3>
+                <div class="player-grid">
+                    <!-- Javascript populates -->
+                </div>
+                <button class="btn-skip" id="btn-skip-player" style="display:none;">⏭ スキップ（選手指定なし）</button>
+                <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Modal -->
+    <div id="summary-modal" class="modal-overlay hidden" style="z-index: 200;">
+        <div class="modal-content summary-content">
+            <h3>試合集約データ</h3>
+            <div id="summary-match-info" style="text-align:center; color:#aaa; margin-bottom:15px; font-size:0.95rem; font-weight:600;"></div>
+            
+            <h4 style="margin-top:5px; margin-bottom:8px; color:#fff;">シュート分布チャート</h4>
+            <div class="summary-charts-container">
+                <div class="mini-court-wrapper">
+                    <div class="mini-court-title" style="color:var(--primary);">オフェンス</div>
+                    <div id="mini-court-attack" class="mini-court"></div>
+                </div>
+                <div class="mini-court-wrapper">
+                    <div class="mini-court-title" style="color:var(--defense-primary);">ディフェンス</div>
+                    <div id="mini-court-defense" class="mini-court"></div>
+                </div>
+            </div>
+
+            <h4 style="margin-top:15px; margin-bottom:8px; color:#fff;">選手別スタッツ</h4>
+            <div class="summary-table-container">
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th>選手</th>
+                            <th>ST</th>
+                            <th>得点</th>
+                            <th>ミス</th>
+                            <th>決定率</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summary-table-body">
+                    </tbody>
+                </table>
+            </div>
+            <div class="summary-totals" style="margin-top: 15px; color: #ddd; font-size: 0.9rem;">
+                <div class="summary-rates-row">
+                    <div class="summary-rate-card">
+                        <div class="summary-rate-label">攻撃効率</div>
+                        <div class="summary-rate-value" id="sum-attack-efficiency">0%</div>
+                    </div>
+                    <div class="summary-rate-card">
+                        <div class="summary-rate-label">ST決定率</div>
+                        <div class="summary-rate-value" id="sum-shot-accuracy">0%</div>
+                    </div>
+                    <div class="summary-rate-card">
+                        <div class="summary-rate-label">GKセーブ率</div>
+                        <div class="summary-rate-value" id="sum-gk-save-rate-summary">0%</div>
+                    </div>
+                </div>
+                <p>総攻撃回数: <span id="sum-attack-total">0</span>　(<span class="stat-detail">ST: <span id="sum-attack-shots">0</span> / TO: <span id="sum-attack-turnovers">0</span></span>)</p>
+                <p>オフェンス総得点: <span id="sum-attack-goals">0</span></p>
+                <hr style="border-color: #444; margin: 8px 0;">
+                <p>相手の総攻撃回数: <span id="sum-def-total">0</span>　(<span class="stat-detail">ST: <span id="sum-def-shots">0</span> / TO: <span id="sum-def-turnovers">0</span></span>)</p>
+                <p>被シュート枠内: <span id="sum-def-target">0</span></p>
+                <p>トータルGKセーブ数: <span id="sum-gk-saves">0</span></p>
+                <div id="gk-individual-stats" style="margin-top: 5px; color: #bbb;"></div>
+            </div>
+            
+            <h4 style="margin-top:15px; margin-bottom:8px; color:#fff;">得点経過（ランニングスコア）</h4>
+            <div class="running-score-filter">
+                <button class="rs-filter-btn active" data-rs-filter="all">全て</button>
+                <button class="rs-filter-btn" data-rs-filter="goals">得失点のみ</button>
+            </div>
+            <div id="running-score-container" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; margin-bottom: 15px; font-size: 0.95rem; color:#ccc; overflow:visible;">
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 15px;" class="modal-buttons">
+                <button class="btn-action" id="btn-download-img" style="background:#3498db; flex:1; padding: 12px; border:none;">📸 画像として保存</button>
+                <button class="btn-cancel" onclick="closeSummaryModal()" style="flex:1; margin-top:0;">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Export Modal (For iOS Long Press Save) -->
+    <div id="export-modal" class="modal-overlay hidden" style="z-index: 300;">
+        <div class="modal-content" style="background: rgba(15, 20, 30, 0.95); height: 90vh; display: flex; flex-direction: column; align-items: center; padding: 20px;">
+            <p style="color:var(--primary); font-weight:bold; margin-bottom: 15px; font-size:1.1rem; text-align:center;">
+                👇 下の画像を長押しして<br>「"写真"に追加 (保存)」を選んでください
+            </p>
+            <div style="flex: 1; overflow-y: auto; width: 100%; border: 2px dashed var(--primary); border-radius: 8px; background: #000;">
+                <img id="exported-image" src="" style="width: 100%; height: auto; display: block;">
+            </div>
+            <button class="btn-cancel" onclick="document.getElementById('export-modal').classList.add('hidden')" style="margin-top: 15px;">完了</button>
+        </div>
+    </div>
+
+    <script src="app.js?v=2"></script>
+</body>
+</html>

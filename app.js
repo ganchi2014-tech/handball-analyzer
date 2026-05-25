@@ -883,6 +883,34 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.summaryModal.classList.remove('hidden');
     });
 
+    // ── Summary modal action buttons (submit + finish) ──
+    const btnSummarySubmit = document.getElementById('btn-summary-submit');
+    const btnSummaryFinish = document.getElementById('btn-summary-finish');
+    if (btnSummarySubmit) {
+        btnSummarySubmit.addEventListener('click', () => {
+            const match = state.viewMatch || {
+                date: ui.dateInput.value,
+                opponent: ui.opponentInput.value,
+                shots: state.shots
+            };
+            submitMatchToTeacher(match);
+        });
+    }
+    if (btnSummaryFinish) {
+        btnSummaryFinish.addEventListener('click', () => {
+            if (state.shots.length === 0) {
+                showToast('⚠ 記録されたシュートがありません');
+                return;
+            }
+            if (!confirm(`現在の試合（${state.shots.length} 件）を履歴に保存して新規試合を開始します。\nよろしいですか？`)) return;
+            const m = archiveCurrentMatch();
+            clearCurrentMatch();
+            updateHistoryCount();
+            showToast(`✅ 「${m.date} vs ${m.opponent || '対戦相手'}」を保存`);
+            window.closeSummaryModal();
+        });
+    }
+
     // ── C3: Running score filter ──
     document.querySelectorAll('.rs-filter-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -905,6 +933,9 @@ document.addEventListener('DOMContentLoaded', () => {
             : (ui.dateInput.value || '日付未設定');
         const prefix = state.viewMatch ? '📚 履歴 — ' : '';
         document.getElementById('summary-match-info').textContent = `${prefix}${dateStr} VS ${opponent}`;
+        // Historical view: hide "履歴保存→新規" (already archived)
+        const finishBtn = document.getElementById('btn-summary-finish');
+        if (finishBtn) finishBtn.style.display = state.viewMatch ? 'none' : '';
 
         // ── A1 + A3: 詳細なスタッツ集計 ──
         let attTotal = 0, attShots = 0, attGoals = 0, attTurnovers = 0;
@@ -1209,9 +1240,11 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.btnDownloadImg.addEventListener('click', async () => {
             const sumContent = document.querySelector('.summary-content');
             sumContent.classList.add('exporting');
-            
+
+            const actions = document.querySelector('.summary-actions');
+            if (actions) actions.style.display = 'none';
             const modalBtns = document.querySelector('.modal-buttons');
-            modalBtns.style.display = 'none';
+            if (modalBtns) modalBtns.style.display = 'none';
 
             // Hide filter buttons during export
             const filterBtns = document.querySelector('.running-score-filter');
@@ -1234,7 +1267,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert("画像保存に失敗しました。");
             } finally {
                 sumContent.classList.remove('exporting');
-                modalBtns.style.display = 'flex';
+                if (actions) actions.style.display = '';
+                if (modalBtns) modalBtns.style.display = 'flex';
                 if (filterBtns) filterBtns.style.display = 'flex';
             }
         });

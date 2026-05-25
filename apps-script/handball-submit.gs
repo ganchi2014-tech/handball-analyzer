@@ -8,9 +8,11 @@
  * セットアップ手順は同じディレクトリの README.md を参照。
  */
 
-// ── 設定 ── 自分の Sheet ID とフォルダ ID に書き換えてください
-const SHEET_ID  = 'PASTE_YOUR_GOOGLE_SHEET_ID_HERE';
-const FOLDER_ID = 'PASTE_YOUR_DRIVE_FOLDER_ID_HERE';
+// ── 設定 ── このアプリ用に既に入力済み
+// Sheet : https://docs.google.com/spreadsheets/d/1j3sbt8hohug2wOTynup6w3NQ3qw-n8nvNQBEwKOp954/edit
+// Folder: https://drive.google.com/drive/folders/1TTKZz6JJLSFNFf64PAE87O3VtW-T-IAT
+const SHEET_ID  = '1j3sbt8hohug2wOTynup6w3NQ3qw-n8nvNQBEwKOp954';
+const FOLDER_ID = '1TTKZz6JJLSFNFf64PAE87O3VtW-T-IAT';
 
 // Sheet 全体の列順 — CSV のヘッダーに submitted_at と student_name を前置する
 const PREFIX_COLS = ['submitted_at', 'student_name'];

@@ -15,6 +15,34 @@
     <link rel="stylesheet" href="styles.css?v=23">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <!-- Firebase SDK v10 (handball-mental と共通名簿を共有) -->
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
+    <script>
+      // handball-mental と完全同一の Firebase プロジェクトに接続
+      const firebaseConfig = {
+        apiKey: "AIzaSyC7PV1Q5Fzk-SirYHQR0BBbCU7WiFrMOhQ",
+        authDomain: "handball-mental.firebaseapp.com",
+        databaseURL: "https://handball-mental-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "handball-mental",
+        storageBucket: "handball-mental.firebasestorage.app",
+        messagingSenderId: "155616116061",
+        appId: "1:155616116061:web:1f2bd827637dd445cf3cb4"
+      };
+      try {
+        firebase.initializeApp(firebaseConfig);
+        window.fbAuth = firebase.auth();
+        window.fbDB = firebase.database();
+        // 名簿を読むため匿名サインイン
+        window.fbAuth.signInAnonymously().catch(e => console.warn('[analyzer FB auth]', e));
+        window.FIREBASE_READY = true;
+      } catch (e) {
+        console.warn('[analyzer FB init]', e);
+        window.FIREBASE_READY = false;
+      }
+    </script>
 </head>
 <body>
     <div id="app" class="attack-mode">
@@ -451,9 +479,9 @@
         </div>
     </div>
 
-    <script src="lib/roster.js?v=15"></script>
+    <script src="lib/roster.js?v=16"></script>
     <script src="lib/stats.js?v=15"></script>
-    <script src="lib/csv.js?v=15"></script>
-    <script src="app.js?v=26"></script>
+    <script src="lib/csv.js?v=16"></script>
+    <script src="app.js?v=27"></script>
 </body>
 </html>

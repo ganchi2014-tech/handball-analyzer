@@ -252,6 +252,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     renderGkRow();
 
+    // ── Firebase /roster とリアルタイム同期（共通名簿マスター）──
+    // mental app と同じ Firebase プロジェクトの /roster を購読して
+    // 名簿が更新されたら自動で UI に反映する。
+    (function initFirebaseRosterSync() {
+        if (!window.FIREBASE_READY || !window.HA.roster.subscribeFirebase) return;
+        let firstSync = true;
+        HA.roster.subscribeFirebase((fbRoster) => {
+            if (!Array.isArray(fbRoster) || fbRoster.length === 0) return;
+            // 既存のロースターを Firebase の内容で置換
+            state.roster = fbRoster.map(p => ({
+                name: p.name,
+                isGK: !!p.isGK,
+                rosterId: p.rosterId || null
+            }));
+            HA.roster.save(state.roster);
+            refreshRosterDerivatives();
+            if (typeof renderGkRow === 'function') renderGkRow();
+            // 設定モーダルが開いていれば再描画
+            if (typeof renderRosterEditor === 'function') {
+                try { renderRosterEditor(); } catch (e) {}
+            }
+            if (firstSync) {
+                console.log('[analyzer] Firebase 名簿 ' + fbRoster.length + '名 同期');
+                firstSync = false;
+            }
+        });
+    })();
+
     // ── Home-screen lineup chip ──
     const btnHomeLineup = document.getElementById('btn-home-lineup');
     const homeLineupCount = document.getElementById('home-lineup-count');
@@ -789,6 +817,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!state.currentDraftShot) return;
         const isTurnover = state.currentDraftShot.result === 'turnover';
         state.currentDraftShot.player = num;
+        // 名簿から rosterId を逆引き（Firebase 共通名簿）
+        const entry = (state.roster || []).find(p => p && p.name === num);
+        state.currentDraftShot.rosterId = (entry && entry.rosterId) || null;
         addShotAndClose();
         // B1: Toast feedback for turnovers
         if (isTurnover) {

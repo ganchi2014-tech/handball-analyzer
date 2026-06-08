@@ -1738,6 +1738,86 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ── Firebase クラウド保存（mental アプリ連携） ──
+    // 試合データを /matches/{matchId} に丸ごと保存。
+    // mental 顧問が「クラウド試合取込」でワンボタン配信する。
+    async function saveMatchToFirebase(match) {
+        const status = document.getElementById('cloud-status');
+        function setStatus(cls, msg) {
+            if (!status) return;
+            status.className = `submit-status ${cls}`;
+            status.classList.remove('hidden');
+            status.textContent = msg;
+        }
+        if (!window.fbDB) {
+            showToast('⚠ クラウド未接続');
+            setStatus('error', 'Firebase に接続できていません');
+            return;
+        }
+        if (!match || !match.shots || match.shots.length === 0) {
+            showToast('⚠ シュート記録がありません');
+            return;
+        }
+        const date = match.date || new Date().toISOString().slice(0, 10);
+        const opponent = match.opponent || 'unknown';
+        // matchId は date + opponent（同じ試合は上書き）
+        const matchId = (date + '_' + opponent).replace(/[.#$\[\]\/]/g, '_');
+        showToast('☁ 送信中…');
+        setStatus('', 'クラウドに送信中…');
+        try {
+            // roster から rosterId を補完しつつ shots を整形
+            const roster = state.roster || [];
+            const rows = match.shots.map(s => {
+                let rosterId = s.rosterId || null;
+                if (!rosterId && s.player) {
+                    const found = roster.find(p => p && p.name === s.player);
+                    if (found) rosterId = found.rosterId || null;
+                }
+                return {
+                    date,
+                    opponent,
+                    period: s.period == null ? '' : s.period,
+                    time_s: s.time == null ? '' : s.time,
+                    mode: s.mode || '',
+                    result: s.result || '',
+                    attack_type: s.attackType || '',
+                    course: s.course || '',
+                    player: s.player || '',
+                    rosterId: rosterId || '',
+                    gk: s.gk || '',
+                    to_reason: s.toReason || '',
+                    x: s.x == null ? '' : Number(s.x).toFixed(2),
+                    y: s.y == null ? '' : Number(s.y).toFixed(2)
+                };
+            });
+            const payload = {
+                date,
+                opponent,
+                savedAt: firebase.database.ServerValue.TIMESTAMP,
+                rowCount: rows.length,
+                rows
+            };
+            await window.fbDB.ref('matches/' + matchId).set(payload);
+            showToast('✅ メンタルアプリに送信完了');
+            setStatus('success', `✅ 送信完了（${rows.length}件）。顧問が mental アプリで取り込めます。`);
+        } catch (e) {
+            console.error('[cloud save]', e);
+            showToast('⚠ 送信失敗: ' + e.message);
+            setStatus('error', '送信失敗: ' + e.message);
+        }
+    }
+
+    const btnSummaryCloud = document.getElementById('btn-summary-cloud');
+    if (btnSummaryCloud) {
+        btnSummaryCloud.addEventListener('click', () => {
+            saveMatchToFirebase({
+                date: ui.dateInput.value,
+                opponent: ui.opponentInput.value,
+                shots: state.shots
+            });
+        });
+    }
+
     // ── Match history + CSV export (CSV utils delegated to HA.csv) ──
     const HISTORY_KEY = 'handball-analyzer-history-v1';
 

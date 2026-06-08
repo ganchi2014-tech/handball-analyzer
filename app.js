@@ -943,13 +943,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSummaryArchive = document.getElementById('btn-summary-archive');
     const btnSummaryReset   = document.getElementById('btn-summary-reset');
     if (btnSummarySubmit) {
-        btnSummarySubmit.addEventListener('click', () => {
+        btnSummarySubmit.addEventListener('click', async () => {
             const match = state.viewMatch || {
                 date: ui.dateInput.value,
                 opponent: ui.opponentInput.value,
                 shots: state.shots
             };
-            submitMatchToTeacher(match);
+            if (!match.shots || match.shots.length === 0) {
+                showToast('⚠ シュート記録がありません');
+                return;
+            }
+            const status = document.getElementById('cloud-status');
+            if (status) {
+                status.classList.remove('hidden');
+                status.className = 'submit-status';
+                status.textContent = '📨 送信中…';
+            }
+            btnSummarySubmit.disabled = true;
+            // 教師スプレッドシート と メンタルアプリ の両方に同時送信（silent=true で個別トースト抑制）
+            // 片方が失敗してももう片方は完了させる
+            const [teacher, mental] = await Promise.allSettled([
+                submitMatchToTeacher(match, true),
+                saveMatchToFirebase(match, true)
+            ]);
+            btnSummarySubmit.disabled = false;
+            const tOk = teacher.status === 'fulfilled' && teacher.value && teacher.value.ok;
+            const mOk = mental.status === 'fulfilled' && mental.value && mental.value.ok;
+            if (status) {
+                status.className = 'submit-status ' + (tOk && mOk ? 'success' : (tOk || mOk ? '' : 'error'));
+                status.textContent = `📨 教師: ${tOk ? '✅' : '⚠'}　／　☁ メンタルアプリ: ${mOk ? '✅' : '⚠'}`;
+            }
+            showToast(tOk && mOk ? '✅ 両方に送信完了' : (tOk || mOk ? '⚠ 片方のみ成功（詳細は下の表示）' : '⚠ 送信失敗'));
         });
     }
     if (btnSummaryArchive) {
@@ -1660,22 +1684,24 @@ document.addEventListener('DOMContentLoaded', () => {
         return userName || getDeviceId();
     }
 
-    async function submitMatchToTeacher(match) {
+    async function submitMatchToTeacher(match, silent) {
         const url = getSubmitUrl();
         const name = getStudentName();
         const status = document.getElementById('submit-status');
         function setStatus(cls, msg) {
+            if (silent) return;
             if (!status) return;
             status.className = `submit-status ${cls}`;
             status.textContent = msg;
         }
+        function toast(msg) { if (!silent) showToast(msg); }
         if (!match || !match.shots || match.shots.length === 0) {
-            showToast('⚠ シュート記録がありません');
-            return;
+            if (!silent) showToast('⚠ シュート記録がありません');
+            return { ok: false, empty: true };
         }
         const filename = `handball_${HA.csv.safeFilenamePart(match.date || 'undated')}_${HA.csv.safeFilenamePart(match.opponent || 'match')}.csv`;
         const csv = HA.csv.matchToCsv(match);
-        showToast('📨 送信中…');
+        toast('📨 送信中…');
         setStatus('', '送信中…');
         try {
             const res = await fetch(url, {
@@ -1697,11 +1723,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (!data.ok) throw new Error(data.error || 'unknown');
             const msg = data.replaced ? '🔄 既存データを置換しました' : '✅ 送信完了';
-            showToast(msg);
+            toast(msg);
             setStatus('success', `${msg}（${data.rowsAdded || 0}件追記）`);
+            return { ok: true };
         } catch (e) {
-            showToast(`⚠ 送信失敗: ${e.message}`);
+            toast(`⚠ 送信失敗: ${e.message}`);
             setStatus('error', `送信失敗: ${e.message}`);
+            return { ok: false, error: e.message };
         }
     }
 
@@ -1741,28 +1769,30 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Firebase クラウド保存（mental アプリ連携） ──
     // 試合データを /matches/{matchId} に丸ごと保存。
     // mental 顧問が「クラウド試合取込」でワンボタン配信する。
-    async function saveMatchToFirebase(match) {
+    async function saveMatchToFirebase(match, silent) {
         const status = document.getElementById('cloud-status');
         function setStatus(cls, msg) {
+            if (silent) return;
             if (!status) return;
             status.className = `submit-status ${cls}`;
             status.classList.remove('hidden');
             status.textContent = msg;
         }
+        function toast(msg) { if (!silent) showToast(msg); }
         if (!window.fbDB) {
-            showToast('⚠ クラウド未接続');
+            toast('⚠ クラウド未接続');
             setStatus('error', 'Firebase に接続できていません');
-            return;
+            return { ok: false, error: 'no firebase' };
         }
         if (!match || !match.shots || match.shots.length === 0) {
-            showToast('⚠ シュート記録がありません');
-            return;
+            if (!silent) showToast('⚠ シュート記録がありません');
+            return { ok: false, empty: true };
         }
         const date = match.date || new Date().toISOString().slice(0, 10);
         const opponent = match.opponent || 'unknown';
         // matchId は date + opponent（同じ試合は上書き）
         const matchId = (date + '_' + opponent).replace(/[.#$\[\]\/]/g, '_');
-        showToast('☁ 送信中…');
+        toast('☁ 送信中…');
         setStatus('', 'クラウドに送信中…');
         try {
             // roster から rosterId を補完しつつ shots を整形
@@ -1798,25 +1828,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 rows
             };
             await window.fbDB.ref('matches/' + matchId).set(payload);
-            showToast('✅ メンタルアプリに送信完了');
+            toast('✅ メンタルアプリに送信完了');
             setStatus('success', `✅ 送信完了（${rows.length}件）。顧問が mental アプリで取り込めます。`);
+            return { ok: true, rowCount: rows.length };
         } catch (e) {
             console.error('[cloud save]', e);
-            showToast('⚠ 送信失敗: ' + e.message);
+            toast('⚠ 送信失敗: ' + e.message);
             setStatus('error', '送信失敗: ' + e.message);
+            return { ok: false, error: e.message };
         }
     }
 
-    const btnSummaryCloud = document.getElementById('btn-summary-cloud');
-    if (btnSummaryCloud) {
-        btnSummaryCloud.addEventListener('click', () => {
-            saveMatchToFirebase({
-                date: ui.dateInput.value,
-                opponent: ui.opponentInput.value,
-                shots: state.shots
-            });
-        });
-    }
+    // btn-summary-cloud は廃止（btn-summary-submit が教師＋メンタルアプリ両方に送信）
 
     // ── Match history + CSV export (CSV utils delegated to HA.csv) ──
     const HISTORY_KEY = 'handball-analyzer-history-v1';

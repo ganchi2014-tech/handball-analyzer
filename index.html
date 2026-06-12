@@ -12,6 +12,14 @@
     <meta name="application-name" content="ハンド分析">
     
     <title>Handball Analyzer</title>
+    <script>
+      // オフライン起動対応（遠征先の圏外体育館でも記録できるように）
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js').catch(e => console.warn('SW register failed:', e));
+        });
+      }
+    </script>
     <link rel="stylesheet" href="styles.css?v=23">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -483,6 +491,6 @@
     <script src="lib/roster.js?v=16"></script>
     <script src="lib/stats.js?v=15"></script>
     <script src="lib/csv.js?v=16"></script>
-    <script src="app.js?v=29"></script>
+    <script src="app.js?v=30"></script>
 </body>
 </html>

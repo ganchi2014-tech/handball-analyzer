@@ -133,6 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 inputMode: state.inputMode,
                 matchDate: ui.dateInput.value,
                 matchOpponent: ui.opponentInput.value,
+                cloudMatchId: state.cloudMatchId || null,
                 savedAt: Date.now()
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
@@ -163,6 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (snap.matchDate) ui.dateInput.value = snap.matchDate;
             if (snap.matchOpponent) ui.opponentInput.value = snap.matchOpponent;
+            state.cloudMatchId = snap.cloudMatchId || null;
 
             // Mode radio + classes
             if (state.mode === 'defense') {
@@ -1634,6 +1636,11 @@ document.addEventListener('DOMContentLoaded', () => {
         shot.result = newResult;
         shot.attackType = newAtk;
         shot.course = (newResult === 'goal' || newResult === 'save') ? newCourse : null;
+        // 選手を付け替えたら rosterId も追従させる（旧IDのままだと mental 側で他人に配信される）
+        if (shot.player !== editingPlayerCache) {
+            const rp = (state.roster || []).find(p => p && p.name === editingPlayerCache);
+            shot.rosterId = (rp && rp.rosterId) || null;
+        }
         shot.player = editingPlayerCache;
         recomputeScore();
         renderPlots();
@@ -1790,8 +1797,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const date = match.date || new Date().toISOString().slice(0, 10);
         const opponent = match.opponent || 'unknown';
-        // matchId は date + opponent（同じ試合は上書き）
-        const matchId = (date + '_' + opponent).replace(/[.#$\[\]\/]/g, '_');
+        const baseId = (date + '_' + opponent).replace(/[.#$\[\]\/]/g, '_');
+        // 同日同相手の2本目（A戦/B戦）が1本目を黙って上書きしないようにする。
+        // 一度この試合に割り当てたIDは再送時も使い回す（修正の上書きはOK）。
+        let matchId = match.cloudMatchId || (!match.id ? state.cloudMatchId : null) || null;
+        if (!matchId) {
+            matchId = baseId;
+            try {
+                const snap = await window.fbDB.ref('matches/' + baseId).once('value');
+                if (snap.exists()) {
+                    if (confirm('クラウドに同じ日付・同じ相手の試合が既にあります。\n\n[OK] ＝ 別の試合として保存（同日2本目: A戦/B戦など）\n[キャンセル] ＝ 同じ試合の修正として上書き')) {
+                        let n = 2;
+                        while ((await window.fbDB.ref('matches/' + baseId + '_' + n).once('value')).exists()) n++;
+                        matchId = baseId + '_' + n;
+                    }
+                }
+            } catch (err) { console.warn('[cloud] 既存チェック失敗（従来どおり保存）', err); }
+            // 割り当てたIDを記憶（current match は state、履歴は match オブジェクトへ）
+            if (match.id) {
+                match.cloudMatchId = matchId;
+                try {
+                    const history = loadHistory();
+                    const h = history.find(m => m.id === match.id);
+                    if (h) { h.cloudMatchId = matchId; saveHistory(history); }
+                } catch (e2) {}
+            } else {
+                state.cloudMatchId = matchId;
+                try { saveState(); } catch (e2) {}
+            }
+        }
         toast('☁ 送信中…');
         setStatus('', 'クラウドに送信中…');
         try {
@@ -1878,6 +1912,7 @@ document.addEventListener('DOMContentLoaded', () => {
             score: { us: state.score.us, opponent: state.score.opponent },
             shots: state.shots.map(s => ({ ...s })),
             timerSeconds: state.timer.seconds,
+            cloudMatchId: state.cloudMatchId || null, // クラウド送信済みなら同じIDを引き継ぐ
             archivedAt: Date.now()
         };
         const history = loadHistory();
@@ -1888,6 +1923,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function clearCurrentMatch() {
         state.shots = [];
+        state.cloudMatchId = null; // 新規試合はクラウドIDも新規割当
         state.score = { us: 0, opponent: 0 };
         clearInterval(state.timer.interval);
         state.timer = { running: false, seconds: 0, interval: null };

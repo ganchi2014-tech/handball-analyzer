@@ -55,7 +55,7 @@ describe('HA.roster.getGkShortNames', () => {
 });
 
 describe('HA.roster.load/save round-trip', () => {
-    test('save then load returns the same data', () => {
+    test('save then load returns the same data (load は rosterId を補完する)', () => {
         const original = [
             { name: '③テスト', isGK: false },
             { name: '①GK太郎', isGK: true }
@@ -65,7 +65,8 @@ describe('HA.roster.load/save round-trip', () => {
         try {
             HA.roster.save(original);
             const loaded = HA.roster.load();
-            expect(loaded).toEqual(original);
+            // v2: load は正規化で rosterId（無ければ null）を必ず付与する
+            expect(loaded).toEqual(original.map(p => ({ ...p, rosterId: null })));
         } finally {
             if (stash === null) localStorage.removeItem(HA.roster.KEY);
             else localStorage.setItem(HA.roster.KEY, stash);

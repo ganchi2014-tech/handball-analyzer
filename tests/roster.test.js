@@ -16,9 +16,13 @@ describe('HA.roster.stripGradePrefix', () => {
 });
 
 describe('HA.roster.makeDefault', () => {
-    test('returns 32 players', () => {
+    test('returns 22 players (1・2年のみ。2026-07 3年生引退)', () => {
         const r = HA.roster.makeDefault();
-        expect(r.length).toBe(32);
+        expect(r.length).toBe(22);
+    });
+    test('no grade-3 entries', () => {
+        const r = HA.roster.makeDefault();
+        expect(r.filter(p => p.name.startsWith('③')).length).toBe(0);
     });
     test('each entry has name and isGK fields', () => {
         const r = HA.roster.makeDefault();
@@ -27,10 +31,10 @@ describe('HA.roster.makeDefault', () => {
             expect(typeof p.isGK).toBe('boolean');
         });
     });
-    test('5 default GKs', () => {
+    test('3 default GKs', () => {
         const r = HA.roster.makeDefault();
         const gks = r.filter(p => p.isGK);
-        expect(gks.length).toBe(5);
+        expect(gks.length).toBe(3);
     });
 });
 
@@ -72,7 +76,7 @@ describe('HA.roster.load/save round-trip', () => {
         try {
             localStorage.removeItem(HA.roster.KEY);
             const loaded = HA.roster.load();
-            expect(loaded.length).toBe(32);
+            expect(loaded.length).toBe(22);
         } finally {
             if (stash !== null) localStorage.setItem(HA.roster.KEY, stash);
         }

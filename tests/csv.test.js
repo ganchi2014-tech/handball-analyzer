@@ -39,16 +39,23 @@ describe('HA.csv.shotToRow', () => {
         expect(row[6]).toBe('set');
         expect(row[7]).toBe('TL');
         expect(row[8]).toBe('③赤塚');
-        expect(row[9]).toBe('桑原');
-        expect(row[10]).toBe('');
-        expect(row[11]).toBe('12.34');
-        expect(row[12]).toBe('56.78');
+        expect(row[9]).toBe('');        // rosterId（v2で9列目に追加。roster未指定なので空）
+        expect(row[10]).toBe('桑原');   // gk（v2で1列後ろへ）
+        expect(row[11]).toBe('');       // to_reason
+        expect(row[12]).toBe('12.34');
+        expect(row[13]).toBe('56.78');
+    });
+    test('resolves rosterId from roster by player name', () => {
+        const shot = { period: 1, mode: 'attack', result: 'goal', player: '③赤塚', x: null, y: null };
+        const roster = [{ name: '③赤塚', isGK: false, rosterId: 'rid-123' }];
+        const row = HA.csv.shotToRow(shot, { date: '', opponent: '' }, roster);
+        expect(row[9]).toBe('rid-123');
     });
     test('handles null x/y for turnovers', () => {
         const shot = { period: 1, mode: 'attack', result: 'turnover', x: null, y: null };
         const row = HA.csv.shotToRow(shot, { date: '', opponent: '' });
-        expect(row[11]).toBe('');
         expect(row[12]).toBe('');
+        expect(row[13]).toBe('');
     });
 });
 

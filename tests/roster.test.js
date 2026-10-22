@@ -83,3 +83,35 @@ describe('HA.roster.load/save round-trip', () => {
         }
     });
 });
+
+describe('HA.roster.splitRowsByPlayer', () => {
+    const roster = [
+        { name: '②新井', isGK: false, rosterId: 'r1' },
+        { name: '②小川', isGK: true, rosterId: 'r2' },
+        { name: '①関山', isGK: true, rosterId: 'r3' }
+    ];
+    test('attack rows go to their rosterId, numbered from 0', () => {
+        const out = HA.roster.splitRowsByPlayer([
+            { mode: 'attack', result: 'goal', rosterId: 'r1' },
+            { mode: 'attack', result: 'save', rosterId: 'r1' }
+        ], roster);
+        expect(Object.keys(out)).toEqual(['r1']);
+        expect(out.r1[1].result).toBe('save');
+    });
+    test('defense rows go to the GK by short name', () => {
+        const out = HA.roster.splitRowsByPlayer([
+            { mode: 'defense', result: 'save', gk: '小川', rosterId: '' },
+            { mode: 'defense', result: 'goal', gk: '①関山', rosterId: '' }
+        ], roster);
+        expect(out.r2[0].result).toBe('save');
+        expect(out.r3[0].result).toBe('goal');
+    });
+    test('rows without a resolvable player are dropped', () => {
+        const out = HA.roster.splitRowsByPlayer([
+            { mode: 'attack', result: 'goal', rosterId: '' },
+            { mode: 'defense', result: 'goal', gk: '' },
+            { mode: 'defense', result: 'goal', gk: '不明' }
+        ], roster);
+        expect(Object.keys(out).length).toBe(0);
+    });
+});

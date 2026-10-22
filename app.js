@@ -1854,17 +1854,39 @@ document.addEventListener('DOMContentLoaded', () => {
                     y: s.y == null ? '' : Number(s.y).toFixed(2)
                 };
             });
+            // 選手別に振り分け（/playerStats/{rosterId}/{matchId}）。顧問の取込を待たずに
+            // 各選手の mental「マイ統計」へ即時反映される
+            const byPlayer = HA.roster.splitRowsByPlayer(rows, roster);
+            const playerRids = {};
+            Object.keys(byPlayer).forEach(rid => { playerRids[rid] = true; });
+            // 修正の再送で外れた選手の分を消すため、前回の配信先を先に読む
+            let prevRids = {};
+            try {
+                prevRids = (await window.fbDB.ref('matches/' + matchId + '/playerRids').once('value')).val() || {};
+            } catch (e) { console.warn('[cloud] 前回配信先の取得失敗', e); }
             const payload = {
                 date,
                 opponent,
                 savedAt: firebase.database.ServerValue.TIMESTAMP,
                 rowCount: rows.length,
-                rows
+                rows,
+                playerRids
             };
             await window.fbDB.ref('matches/' + matchId).set(payload);
+            // 選手別配信は matches 保存とは分けて書く（失敗しても顧問取込の従来経路は生きる）
+            let delivered = 0;
+            try {
+                const fan = {};
+                Object.keys(prevRids).forEach(rid => { if (!byPlayer[rid]) fan['playerStats/' + rid + '/' + matchId] = null; });
+                Object.entries(byPlayer).forEach(([rid, rs]) => { fan['playerStats/' + rid + '/' + matchId] = rs; });
+                if (Object.keys(fan).length) await window.fbDB.ref().update(fan);
+                delivered = Object.keys(byPlayer).length;
+            } catch (e) { console.warn('[cloud] 選手別配信失敗', e); }
             toast('✅ メンタルアプリに送信完了');
-            setStatus('success', `✅ 送信完了（${rows.length}件）。顧問が mental アプリで取り込めます。`);
-            return { ok: true, rowCount: rows.length };
+            setStatus('success', delivered
+                ? `✅ 送信完了（${rows.length}件・${delivered}名のマイ統計に反映）`
+                : `✅ 送信完了（${rows.length}件）。顧問が mental アプリで取り込めます。`);
+            return { ok: true, rowCount: rows.length, delivered };
         } catch (e) {
             console.error('[cloud save]', e);
             toast('⚠ 送信失敗: ' + e.message);

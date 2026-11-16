@@ -1338,17 +1338,21 @@ body {
  *  分析担当用の追加（状況 / アシスト / 集約表示）
  * ============================================================ */
 .analyst-banner {
-    background: rgba(241, 196, 15, 0.18);
-    border-bottom: 1px solid rgba(241, 196, 15, 0.5);
-    color: #f1c40f;
-    font-size: 0.75rem;
+    background: #f1c40f;
+    color: #1b1b1b;
+    font-size: 0.9rem;
     font-weight: 800;
     text-align: center;
-    padding: 4px 8px;
+    padding: 6px 8px;
+    border-radius: 10px;
+    letter-spacing: 0.05em;
 }
 .analyst-banner span {
-    color: var(--text-muted);
-    font-weight: 600;
+    display: block;
+    color: #4a3d00;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0;
 }
 .practice-btn {
     background: rgba(255,255,255,0.08);
@@ -1531,3 +1535,31 @@ body {
 }
 .rule-text ol { margin: 4px 0 8px 1.2em; padding: 0; }
 .rule-text p { margin: 4px 0; }
+
+/* ── 分析担当用の配色（選手用＝紺と紫 と見分けがつくよう、緑の地に黄色の枠） ── */
+body {
+    background: linear-gradient(135deg, #0d2b25 0%, #123a2c 50%, #06150f 100%);
+    background-attachment: fixed;
+    border-top: 6px solid #f1c40f;
+}
+#app {
+    box-shadow: inset 3px 0 0 #f1c40f, inset -3px 0 0 #f1c40f;
+}
+.scoreboard {
+    background: rgba(241, 196, 15, 0.12);
+    border-color: rgba(241, 196, 15, 0.55);
+}
+.court-container {
+    border: 2px solid rgba(241, 196, 15, 0.7);
+    background: rgba(8, 40, 30, 0.55);
+}
+.court-svg > rect:first-of-type {
+    fill: rgba(22, 160, 133, 0.28);
+}
+.modal-content {
+    background: rgba(14, 38, 32, 0.92);
+    border-top: 3px solid #f1c40f;
+}
+.info-input {
+    background: rgba(241, 196, 15, 0.1);
+}

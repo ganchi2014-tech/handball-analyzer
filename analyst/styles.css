@@ -1,0 +1,1773 @@
+:root {
+    --panel-bg: rgba(255, 255, 255, 0.12);
+    --bg-blur: blur(15px);
+    --border-color: rgba(255, 255, 255, 0.2);
+    --primary: #3498db;
+    --success: #2ecc71;
+    --save: #f1c40f;
+    --miss: #e0e0e0;
+    --defense-primary: #ff4757;
+    --text-main: #ffffff;
+    --text-muted: rgba(255, 255, 255, 0.75);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #1b2838 0%, #291a38 50%, #0d1222 100%);
+    background-attachment: fixed;
+    color: var(--text-main);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    user-select: none;
+}
+
+#app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 8px 12px;
+    gap: 8px;
+    max-width: 600px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.match-info {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+.info-input {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: var(--bg-blur);
+    border: 1px solid var(--border-color);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    width: 45%;
+}
+.info-input::placeholder { color: #888; }
+.vs { color: var(--text-muted); font-size: 0.8rem; font-weight: bold; }
+
+.scoreboard {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--panel-bg);
+    padding: 10px 14px;
+    border-radius: 14px;
+    backdrop-filter: var(--bg-blur);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 6px 18px 0 rgba(0, 0, 0, 0.25);
+}
+
+.team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 30%;
+}
+
+.our-team .score { color: var(--primary); }
+#app.defense-mode .opponent-team .score { color: var(--defense-primary); }
+
+.score {
+    font-size: 1.8rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.team-name {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.timer {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    width: 32%;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+#time-display {
+    font-size: 1.3rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+#timer-toggle {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: white;
+    padding: 3px 14px;
+    border-radius: 14px;
+    font-size: 0.9rem;
+}
+
+.period-chip {
+    background: rgba(52, 152, 219, 0.25);
+    border: 1px solid rgba(52, 152, 219, 0.5);
+    color: #fff;
+    padding: 2px 12px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+}
+.period-chip[data-period="2"] {
+    background: rgba(155, 89, 182, 0.3);
+    border-color: rgba(155, 89, 182, 0.6);
+}
+.period-chip:active {
+    transform: scale(0.95);
+}
+
+.gk-toggle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 4px 6px;
+    border-radius: 10px;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+.gk-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: bold;
+    margin-right: 2px;
+}
+.gk-btn {
+    flex: 1;
+    background: rgba(255,255,255,0.1);
+    color: white;
+    border: 1px solid var(--border-color);
+    padding: 5px 4px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    transition: all 0.2s;
+    min-width: 40px;
+    text-align: center;
+}
+.gk-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    font-weight: bold;
+}
+#app.defense-mode .gk-btn.active {
+    background: var(--save);
+    border-color: var(--save);
+    color: #111;
+}
+
+.mode-toggle {
+    display: flex;
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(44, 62, 80, 0.5);
+}
+.mode-toggle input { display: none; }
+.toggle-btn {
+    flex: 1;
+    text-align: center;
+    padding: 8px 0;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: var(--text-muted);
+}
+.mode-toggle input:checked + .toggle-btn.attack-btn {
+    background-color: rgba(255,255,255,0.15);
+    color: var(--primary);
+    border-bottom: 3px solid var(--primary);
+}
+.mode-toggle input:checked + .toggle-btn.defense-btn {
+    background-color: rgba(255,255,255,0.15);
+    color: var(--defense-primary);
+    border-bottom: 3px solid var(--defense-primary);
+}
+
+.court-container {
+    flex: 1;
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: var(--bg-blur);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    touch-action: none; 
+}
+.court-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    transition: transform 0.5s ease;
+}
+#app.attack-mode .court-svg {
+    transform: rotate(180deg);
+}
+.instruction-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.6);
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    pointer-events: none;
+    transition: opacity 0.5s;
+}
+#plots-container {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+}
+.plot-point {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    margin-left: -9px;
+    margin-top: -9px;
+    border-radius: 50%;
+    transform: scale(0);
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    border: 1px solid rgba(255,255,255,0.7);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 9px;
+    font-weight: bold;
+    color: #111;
+}
+/* ── Result encoding: color + shape + border style ──
+   so the four results stay distinguishable without color (色覚多様性対応) */
+
+/* Attack goal: solid CIRCLE in green */
+.plot-goal {
+    background-color: var(--success);
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.85);
+}
+
+/* Save: solid SQUARE in yellow */
+.plot-save {
+    background-color: var(--save);
+    border-radius: 3px;
+    border: 1.5px solid rgba(255,255,255,0.85);
+}
+
+/* Miss: HOLLOW circle with dashed border (no fill) */
+.plot-miss {
+    background-color: transparent;
+    border: 2.5px dashed rgba(255,255,255,0.9);
+    border-radius: 50%;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+
+/* Turnover with position: orange rounded square */
+.plot-turnover {
+    background-color: #e67e22;
+    border-radius: 8px;
+    border: 1.5px solid rgba(255,255,255,0.85);
+}
+
+/* Defense goal: red circle with × overlay via ::before */
+#app.defense-mode .plot-point.plot-goal,
+.plot-point.mode-defense.plot-goal {
+    background-color: var(--defense-primary);
+    border: 1.5px solid rgba(255,255,255,0.85);
+    border-radius: 50%;
+    position: relative;
+}
+.plot-point.mode-defense.plot-goal::before,
+#app.defense-mode .plot-point.plot-goal::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 70%; height: 2px;
+    background: #fff;
+    transform: translate(-50%, -50%) rotate(45deg);
+    pointer-events: none;
+}
+.plot-point.mode-defense.plot-goal::after,
+#app.defense-mode .plot-point.plot-goal::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 70%; height: 2px;
+    background: #fff;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    pointer-events: none;
+}
+
+@keyframes popIn { to { transform: scale(1); } }
+
+.dashboard {
+    display: flex;
+    gap: 8px;
+}
+.stat-card {
+    flex: 1;
+    background: var(--panel-bg);
+    backdrop-filter: var(--bg-blur);
+    border: 1px solid var(--border-color);
+    padding: 6px 4px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.2);
+}
+.stat-title {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+    line-height: 1.1;
+}
+.stat-value {
+    font-size: 1.2rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding-bottom: 3px;
+}
+.btn-action {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: white;
+    padding: 10px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.88rem;
+}
+
+/* Bottom Sheet Modal */
+.modal-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+}
+.modal-overlay:not(.hidden) {
+    opacity: 1;
+    pointer-events: auto;
+    backdrop-filter: blur(8px);
+}
+.modal-content {
+    background: rgba(25, 30, 45, 0.85); /* 半透明なダークブルー */
+    backdrop-filter: blur(20px);
+    padding: 25px 20px 40px;
+    border-radius: 24px 24px 0 0;
+    border-top: 1px solid rgba(255,255,255,0.2);
+    box-shadow: 0 -10px 25px rgba(0,0,0,0.3);
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.modal-overlay:not(.hidden) .modal-content {
+    transform: translateY(0);
+}
+.modal-content h3 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: white;
+}
+.action-btn {
+    width: 100%;
+    padding: 18px;
+    margin-bottom: 15px;
+    border-radius: 16px;
+    border: none;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #111;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+.success-btn { background: var(--success); }
+.save-btn { background: var(--save); }
+.miss-btn { background: var(--miss); }
+#app.defense-mode .modal-overlay .success-btn { background: var(--defense-primary); color: white; }
+
+.player-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    max-height: 48vh;
+    overflow-y: auto;
+    padding: 5px;
+}
+.player-btn {
+    background: rgba(255,255,255,0.1);
+    color: white;
+    border: 1px solid var(--border-color);
+    padding: 10px 2px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 44px;
+    line-height: 1.2;
+}
+/* 学年別のボタン色分け */
+.player-btn.grade-3 {
+    background: rgba(46, 204, 113, 0.2);
+    border-color: rgba(46, 204, 113, 0.4);
+    color: #e8f5e9;
+}
+.player-btn.grade-2 {
+    background: rgba(52, 152, 219, 0.2);
+    border-color: rgba(52, 152, 219, 0.4);
+    color: #e3f2fd;
+}
+.player-btn.grade-1 {
+    background: rgba(241, 196, 15, 0.2);
+    border-color: rgba(241, 196, 15, 0.4);
+    color: #fffde7;
+}
+
+.btn-cancel {
+    width: 100%;
+    padding: 16px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1rem;
+    margin-top: 5px;
+}
+.step.hidden { display: none; }
+
+/* ── Roster (lineup / bench) sections ── */
+.roster-section {
+    margin-bottom: 12px;
+}
+.roster-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 4px 8px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.roster-header.collapsible {
+    cursor: pointer;
+    user-select: none;
+}
+.roster-count {
+    color: var(--primary);
+    margin-left: 6px;
+    font-size: 0.8rem;
+}
+.btn-link {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--primary);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-weight: 600;
+}
+.btn-link:active {
+    background: rgba(52, 152, 219, 0.2);
+}
+
+.lineup-grid {
+    grid-template-columns: repeat(3, 1fr);
+    max-height: none;
+    overflow-y: visible;
+}
+.lineup-grid .player-btn {
+    padding: 14px 4px;
+    font-size: 0.9rem;
+    min-height: 52px;
+}
+.lineup-grid:empty {
+    display: none;
+}
+
+.bench-grid {
+    margin-top: 6px;
+    max-height: 36vh;
+}
+
+.lineup-empty-hint {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    padding: 10px;
+    background: rgba(241, 196, 15, 0.08);
+    border-radius: 6px;
+    border: 1px dashed rgba(241, 196, 15, 0.3);
+}
+.lineup-empty-hint.hidden { display: none; }
+
+/* Selected state for lineup edit modal */
+.player-btn.selected {
+    background: var(--success) !important;
+    border-color: #27ae60 !important;
+    color: #fff !important;
+    box-shadow: 0 0 8px rgba(46, 204, 113, 0.5);
+}
+.player-btn.disabled {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
+/* Live swap lineup edit modal */
+.lineup-edit-section {
+    margin-bottom: 14px;
+}
+.lineup-hint-inline {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 400;
+}
+#lineup-on-grid {
+    min-height: 60px;
+}
+#lineup-on-grid:empty::before {
+    content: "出場メンバー未設定（ベンチからタップして登録）";
+    display: block;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    padding: 16px;
+    background: rgba(241, 196, 15, 0.08);
+    border: 1px dashed rgba(241, 196, 15, 0.3);
+    border-radius: 6px;
+}
+.modal-drag-handle {
+    width: 40px;
+    height: 4px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 2px;
+    margin: -8px auto 8px;
+    touch-action: none;
+}
+
+/* Settings button + modal */
+.settings-btn {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid var(--border-color);
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 1rem;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.settings-btn:active { background: rgba(255,255,255,0.25); }
+
+.settings-section {
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+.settings-section h4 {
+    color: #fff;
+    margin: 0 0 10px;
+    font-size: 1rem;
+}
+.section-meta {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 400;
+}
+
+.roster-edit-list {
+    max-height: 35vh;
+    overflow-y: auto;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 4px;
+    margin-bottom: 8px;
+}
+.roster-edit-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    color: #fff;
+    font-size: 0.9rem;
+}
+.roster-edit-row:last-child { border-bottom: none; }
+.roster-edit-row .player-name {
+    font-weight: 600;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.roster-row-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.roster-edit-row .gk-mark {
+    color: var(--save);
+    font-weight: 700;
+    font-size: 0.8rem;
+}
+.roster-edit-row .gk-toggle-btn {
+    background: rgba(241, 196, 15, 0.15);
+    border: 1px solid rgba(241, 196, 15, 0.4);
+    color: var(--save);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+.roster-edit-row .gk-toggle-btn.inactive {
+    background: transparent;
+    border-color: var(--border-color);
+    color: var(--text-muted);
+}
+.roster-edit-row .delete-btn {
+    background: transparent;
+    border: 1px solid rgba(231, 76, 60, 0.5);
+    color: #e74c3c;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.add-player-row {
+    display: grid;
+    grid-template-columns: 50px 1fr auto auto;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.grade-select, .add-player-row input[type="text"] {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid var(--border-color);
+    color: #fff;
+    padding: 6px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+.gk-checkbox-label {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.btn-primary-mini {
+    background: var(--primary);
+    border: none;
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 4px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.btn-secondary {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border-color);
+    color: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 6px;
+}
+.btn-secondary:active { background: rgba(255,255,255,0.2); }
+
+/* Swipe direction hint */
+.swipe-hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 10px 24px;
+    border-radius: 16px;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #fff;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+    background: rgba(0,0,0,0.6);
+    border: 2px solid rgba(255,255,255,0.4);
+    pointer-events: none;
+    z-index: 50;
+    transition: opacity 0.1s, transform 0.15s;
+    white-space: nowrap;
+}
+.swipe-hint.hidden {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.7);
+}
+.swipe-hint[data-result="goal"] {
+    background: rgba(46, 204, 113, 0.85);
+    border-color: var(--success);
+}
+.swipe-hint[data-result="save"] {
+    background: rgba(241, 196, 15, 0.85);
+    border-color: var(--save);
+    color: #1a1f2c;
+    text-shadow: none;
+}
+.swipe-hint[data-result="miss"] {
+    background: rgba(149, 165, 166, 0.85);
+    border-color: rgba(255,255,255,0.6);
+}
+
+/* Edit shot modal */
+.edit-meta {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin: -10px 0 14px;
+}
+.edit-section {
+    margin-bottom: 14px;
+}
+.edit-section.hidden { display: none; }
+.edit-label {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-bottom: 6px;
+    font-weight: 600;
+}
+.edit-result-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+}
+.edit-result-btn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    padding: 10px 4px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+.edit-result-btn.selected {
+    background: rgba(52, 152, 219, 0.4);
+    border-color: var(--primary);
+    color: #fff;
+}
+.edit-result-btn[data-result="goal"].selected {
+    background: rgba(46, 204, 113, 0.4);
+    border-color: var(--success);
+}
+.edit-result-btn[data-result="save"].selected {
+    background: rgba(241, 196, 15, 0.35);
+    border-color: var(--save);
+}
+.zone-btn.selected {
+    background: rgba(52, 152, 219, 0.5) !important;
+    border-color: var(--primary) !important;
+    border-style: solid !important;
+}
+.edit-player-display {
+    width: 100%;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border-color);
+    color: #fff;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+}
+.edit-player-display:active { background: rgba(255,255,255,0.15); }
+
+/* Mode toggle + lineup chip — one row */
+.mode-row {
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+}
+.mode-row .mode-toggle {
+    flex: 1;
+}
+.lineup-chip {
+    background: rgba(46, 204, 113, 0.15);
+    border: 1px solid rgba(46, 204, 113, 0.4);
+    color: #d4f5dd;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+.lineup-chip.empty {
+    background: rgba(241, 196, 15, 0.2);
+    border-color: rgba(241, 196, 15, 0.6);
+    color: #fff3c4;
+}
+
+/* Settings: teacher submission inputs */
+.settings-input {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid var(--border-color);
+    color: #fff;
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    width: 100%;
+}
+.settings-input::placeholder {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+.submit-status {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+.submit-status.success {
+    background: rgba(46, 204, 113, 0.15);
+    border: 1px solid rgba(46, 204, 113, 0.4);
+    color: #c5f0d3;
+}
+.submit-status.error {
+    background: rgba(231, 76, 60, 0.15);
+    border: 1px solid rgba(231, 76, 60, 0.4);
+    color: #ffd0d0;
+}
+.submit-status.hidden { display: none; }
+
+/* History modal */
+.history-list {
+    max-height: 50vh;
+    overflow-y: auto;
+    margin-bottom: 10px;
+}
+.history-entry {
+    background: rgba(0,0,0,0.25);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 8px;
+}
+.history-row-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+.history-meta { color: #fff; }
+.history-date { font-size: 0.75rem; color: var(--text-muted); }
+.history-opponent { font-weight: 700; font-size: 0.95rem; }
+.history-score {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--primary);
+    font-variant-numeric: tabular-nums;
+}
+.history-row-stats {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+.history-row-actions {
+    display: flex;
+    gap: 6px;
+}
+.btn-secondary-mini {
+    flex: 1;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border-color);
+    color: #fff;
+    padding: 6px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+.btn-secondary-mini.delete {
+    border-color: rgba(231, 76, 60, 0.5);
+    color: #e74c3c;
+}
+.history-empty {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 30px 10px;
+    background: rgba(0,0,0,0.15);
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+.history-empty.hidden { display: none; }
+
+/* TO reason buttons */
+.to-reason-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 10px 0;
+}
+.to-reason-btn {
+    background: rgba(230, 126, 34, 0.18);
+    border: 1px solid rgba(230, 126, 34, 0.5);
+    color: #ffe5cc;
+    padding: 14px 6px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+}
+.to-reason-btn:active {
+    background: rgba(230, 126, 34, 0.4);
+    transform: scale(0.97);
+}
+.to-reason-btn[data-reason="other"] {
+    grid-column: span 2;
+}
+
+/* Input mode chip — overlay in court's top-right corner to save vertical space */
+.input-mode-row {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 20;
+    display: flex;
+    justify-content: flex-end;
+}
+.input-mode-chip {
+    background: rgba(46, 204, 113, 0.18);
+    border: 1px solid rgba(46, 204, 113, 0.5);
+    color: #d4f5dd;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.input-mode-chip[data-input="modal"] {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--border-color);
+    color: var(--text-muted);
+}
+
+/* Course breakdown in summary (mini 2x2 goal per mode) */
+.course-breakdown-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+.course-mini-goal-wrapper {
+    text-align: center;
+}
+.course-mini-goal-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+.course-mini-goal {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: repeat(3, minmax(30px, 1fr));
+    gap: 2px;
+    width: 100%;
+    background: #1a1f2c;
+    border: 2px solid rgba(255,255,255,0.5);
+    border-radius: 4px;
+    padding: 2px;
+}
+.course-cell {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.75rem;
+    color: #fff;
+    background: rgba(255,255,255,0.05);
+    border-radius: 2px;
+    padding: 4px 2px;
+    line-height: 1.1;
+}
+.course-cell .ratio {
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+.course-cell .raw {
+    color: #888;
+    font-size: 0.65rem;
+    margin-top: 2px;
+}
+
+/* Shot course (goal mouth 2col x 3row = 6 zones) */
+.goal-zone-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: repeat(3, minmax(56px, 1fr));
+    gap: 4px;
+    width: 100%;
+    max-height: 50vh;
+    background: #1a1f2c;
+    border: 3px solid #fff;
+    border-radius: 6px;
+    padding: 4px;
+    margin: 10px 0 6px;
+}
+.zone-btn {
+    background: rgba(255,255,255,0.06);
+    border: 1px dashed rgba(255,255,255,0.25);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    border-radius: 4px;
+    cursor: pointer;
+    touch-action: manipulation;
+    min-height: 56px;
+}
+.zone-btn:active {
+    background: rgba(52, 152, 219, 0.5);
+    border-color: var(--primary);
+    transform: scale(0.97);
+}
+.step-hint {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    margin: 4px 0 8px;
+}
+
+/* Attack type chips on result modal */
+.attack-type-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+.atk-chip {
+    flex: 1;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+.atk-chip.selected {
+    background: rgba(52, 152, 219, 0.35);
+    border-color: var(--primary);
+    color: #fff;
+    box-shadow: 0 0 6px rgba(52, 152, 219, 0.4);
+}
+.atk-chip[data-atk="fast"].selected {
+    background: rgba(46, 204, 113, 0.35);
+    border-color: var(--success);
+    box-shadow: 0 0 6px rgba(46, 204, 113, 0.4);
+}
+.atk-chip[data-atk="7m"].selected {
+    background: rgba(241, 196, 15, 0.35);
+    border-color: var(--save);
+    box-shadow: 0 0 6px rgba(241, 196, 15, 0.4);
+}
+
+.summary-content {
+    background: rgba(25, 30, 45, 0.85);
+    backdrop-filter: blur(20px);
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding-bottom: 30px;
+}
+/* ミニチャート関連 */
+.summary-charts-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.mini-court-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+.mini-court-title {
+    font-size: 0.70rem;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 4px;
+}
+.mini-court {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4/3;
+    border-radius: 8px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border-color);
+}
+.mini-court svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* html2canvas用クラス */
+.summary-content.exporting {
+    max-height: none !important;
+    overflow: visible !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+}
+.summary-content.exporting #running-score-container {
+    max-height: none !important;
+    overflow: visible !important;
+}
+.summary-content.exporting .summary-table-container {
+    max-height: none !important;
+    overflow: visible !important;
+}
+.summary-table-container {
+    overflow-y: auto;
+    max-height: 40vh;
+    border-radius: 8px;
+    background: #111;
+}
+.summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: white;
+    font-size: 0.9rem;
+    text-align: center;
+}
+.summary-table th {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: var(--bg-blur);
+    padding: 10px 5px;
+    position: sticky;
+    top: 0;
+}
+.summary-table td {
+    padding: 10px 5px;
+    border-bottom: 1px solid #333;
+}
+
+/* ── B3: Turnover Button Style ── */
+.btn-turnover {
+    background: #e67e22 !important;
+    border-color: #d35400 !important;
+    color: white !important;
+}
+.btn-turnover:active {
+    background: #d35400 !important;
+    transform: scale(0.96);
+}
+
+/* ── B1: Toast Notification ── */
+.toast {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(40, 45, 60, 0.95);
+    backdrop-filter: blur(12px);
+    color: white;
+    padding: 10px 22px;
+    border-radius: 22px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none;
+    z-index: 500;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    white-space: nowrap;
+}
+.toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* ── A2: Skip Button ── */
+.btn-skip {
+    width: 100%;
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px dashed rgba(255,255,255,0.3);
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 12px;
+    margin-top: 8px;
+    margin-bottom: 4px;
+    transition: background 0.2s;
+}
+.btn-skip:active {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* ── C3: Running Score Filter ── */
+.running-score-filter {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+.rs-filter-btn {
+    flex: 1;
+    padding: 7px 8px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+.rs-filter-btn.active {
+    background: rgba(52, 152, 219, 0.25);
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+/* ── C1: Summary Rate Cards ── */
+.summary-rates-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.summary-rate-card {
+    flex: 1;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 4px;
+    text-align: center;
+}
+.summary-rate-label {
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+    letter-spacing: 0.02em;
+}
+.summary-rate-value {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: white;
+}
+
+/* Stat detail inline text */
+.stat-detail {
+    font-size: 0.8rem;
+    color: #999;
+}
+
+/* ─── 教師に送信ボタン用リマインダー ─── */
+.submit-reminder {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(241, 196, 15, 0.15);
+    border: 2px solid var(--save);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    color: #fff;
+    font-size: 0.92rem;
+    line-height: 1.4;
+    box-shadow: 0 0 12px rgba(241, 196, 15, 0.25);
+}
+.submit-reminder-icon {
+    font-size: 1.4rem;
+    flex-shrink: 0;
+    animation: submit-reminder-pulse 1.6s ease-in-out infinite;
+}
+.submit-reminder-text strong {
+    color: var(--save);
+}
+@keyframes submit-reminder-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50%      { transform: scale(1.18); opacity: 0.7; }
+}
+
+/* ============================================================
+ *  分析担当用の追加（状況 / アシスト / 集約表示）
+ * ============================================================ */
+.analyst-banner {
+    background: #f1c40f;
+    color: #1b1b1b;
+    font-size: 0.9rem;
+    font-weight: 800;
+    text-align: center;
+    padding: 6px 8px;
+    border-radius: 10px;
+    letter-spacing: 0.05em;
+}
+.analyst-banner span {
+    display: block;
+    color: #4a3d00;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+.practice-btn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 6px;
+    padding: 6px 8px;
+    white-space: nowrap;
+}
+.practice-btn:active { background: rgba(255,255,255,0.18); }
+
+.missing-chip {
+    display: block;
+    width: calc(100% - 16px);
+    margin: 6px 8px 0;
+    padding: 10px;
+    background: rgba(230, 126, 34, 0.2);
+    border: 1px solid #e67e22;
+    color: #f5b041;
+    font-size: 0.9rem;
+    font-weight: 700;
+    border-radius: 8px;
+}
+.missing-chip.hidden { display: none; }
+
+.situation-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 10px 0 6px;
+}
+.situation-btn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border-color);
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 800;
+    border-radius: 10px;
+    min-height: 72px;
+    padding: 10px 6px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.situation-btn small {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    pointer-events: none;
+}
+.situation-btn:active {
+    background: rgba(52, 152, 219, 0.5);
+    border-color: var(--primary);
+    transform: scale(0.97);
+}
+.situation-btn[data-situation="contact"] { border-color: rgba(231, 76, 60, 0.7); }
+.situation-btn[data-situation="free"] { border-color: rgba(46, 204, 113, 0.7); }
+
+.assist-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    margin: 8px 0 6px;
+}
+.assist-btn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border-color);
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 700;
+    border-radius: 8px;
+    min-height: 56px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.assist-btn:active {
+    background: rgba(255, 71, 87, 0.45);
+    transform: scale(0.97);
+}
+.assist-self { width: 100%; min-height: 48px; }
+
+.sit-chip-row {
+    display: flex;
+    gap: 6px;
+}
+.sit-chip-row.wrap { flex-wrap: wrap; }
+.sit-chip {
+    flex: 1;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    padding: 8px 6px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.sit-chip-row.wrap .sit-chip { flex: 1 0 28%; }
+.sit-chip.selected {
+    background: rgba(52, 152, 219, 0.35);
+    border-color: var(--primary);
+    color: #fff;
+    box-shadow: 0 0 6px rgba(52, 152, 219, 0.4);
+}
+
+.summary-missing {
+    background: rgba(230, 126, 34, 0.18);
+    border: 1px solid #e67e22;
+    color: #f5b041;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 10px;
+}
+.summary-missing.hidden { display: none; }
+.table-note {
+    color: #888;
+    font-size: 0.75rem;
+    margin-bottom: 6px;
+}
+.opponent-block {
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    color: #ccc;
+    font-size: 0.9rem;
+}
+.opponent-title {
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 6px;
+    font-size: 0.85rem;
+}
+.opponent-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+    gap: 6px;
+}
+.opponent-cell {
+    text-align: center;
+    background: rgba(255,255,255,0.05);
+    border-radius: 6px;
+    padding: 6px 2px;
+}
+.opponent-cell .lab { font-size: 0.7rem; color: #999; }
+.opponent-cell .val { font-size: 1.05rem; font-weight: 800; color: #fff; }
+.opponent-tag {
+    display: inline-block;
+    background: rgba(255, 71, 87, 0.18);
+    border: 1px solid rgba(255, 71, 87, 0.5);
+    border-radius: 12px;
+    padding: 3px 10px;
+    margin: 0 6px 6px 0;
+    font-size: 0.85rem;
+}
+.opponent-tag.muted {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.2);
+    color: #888;
+}
+.opponent-pattern {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.opponent-pattern strong { color: var(--defense-primary); }
+.rule-text {
+    margin-top: 8px;
+    color: #ccc;
+    font-size: 0.82rem;
+    line-height: 1.6;
+}
+.rule-text ol { margin: 4px 0 8px 1.2em; padding: 0; }
+.rule-text p { margin: 4px 0; }
+
+/* ── 分析担当用の配色（選手用＝紺と紫 と見分けがつくよう、緑の地に黄色の枠） ── */
+body {
+    background: linear-gradient(135deg, #0d2b25 0%, #123a2c 50%, #06150f 100%);
+    background-attachment: fixed;
+    border-top: 6px solid #f1c40f;
+}
+#app {
+    box-shadow: inset 3px 0 0 #f1c40f, inset -3px 0 0 #f1c40f;
+}
+.scoreboard {
+    background: rgba(241, 196, 15, 0.12);
+    border-color: rgba(241, 196, 15, 0.55);
+}
+.court-container {
+    border: 2px solid rgba(241, 196, 15, 0.7);
+    background: rgba(8, 40, 30, 0.55);
+}
+.court-svg > rect:first-of-type {
+    fill: rgba(22, 160, 133, 0.28);
+}
+.modal-content {
+    background: rgba(14, 38, 32, 0.92);
+    border-top: 3px solid #f1c40f;
+}
+.info-input {
+    background: rgba(241, 196, 15, 0.1);
+}
+
+/* ── 分析担当用 v2: 試合中の切替 / 後から足す項目 ── */
+.live-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    padding: 6px 10px;
+    align-items: center;
+}
+.live-tag-group { display: flex; align-items: center; gap: 6px; }
+.live-tag-label { font-size: 0.72rem; color: var(--text-muted); font-weight: 700; white-space: nowrap; }
+.live-tags .sit-chip { padding: 5px 8px; font-size: 0.72rem; flex: 0 0 auto; }
+.live-tag-input {
+    width: 64px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border-color);
+    color: #fff;
+    padding: 5px 6px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+}
+.missing-chip.aftertag { margin-top: 4px; }
+
+/* ── v2: 飛んだ先（6区分の周りに枠外4つ）/ GKの動き / きっかけ ── */
+.course-wrap { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+.course-out-top { display: flex; gap: 4px; }
+.course-out-top .out-btn { flex: 1; min-height: 40px; }
+.course-mid { display: flex; gap: 4px; align-items: stretch; }
+.course-mid .goal-zone-grid { flex: 1; }
+.course-mid .out-btn.side { flex: 0 0 52px; }
+.out-btn {
+    background: rgba(231, 76, 60, 0.12);
+    border: 1px dashed rgba(231, 76, 60, 0.7);
+    color: #f5b7b1;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 6px 4px;
+}
+.out-btn.selected { background: rgba(231, 76, 60, 0.45); color: #fff; border-style: solid; }
+.block-btn {
+    min-height: 44px;
+    background: rgba(155, 89, 182, 0.2);
+    border: 1px solid #9b59b6;
+    color: #e8daef;
+    border-radius: 6px;
+    font-weight: 700;
+    cursor: pointer;
+}
+/* 結果に合わない所は押せなくする（得点・セーブは枠内だけ、ミスは枠外とブロックだけ） */
+.course-wrap[data-result="miss"] .goal-zone-grid .zone-btn,
+.course-wrap[data-result="goal"] .out-btn,
+.course-wrap[data-result="save"] .out-btn,
+.course-wrap[data-result="goal"] .block-btn,
+.course-wrap[data-result="save"] .block-btn { opacity: 0.25; pointer-events: none; }
+#edit-course-out .out-btn { flex: 1; }
+.gkmove-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%; }
+.gkmove-btn {
+    min-height: 56px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border-color);
+    color: #fff;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+.cue-bar { display: flex; align-items: center; gap: 6px; padding: 4px 10px 6px; }
+.cue-buttons { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+.cue-btn {
+    background: rgba(241, 196, 15, 0.15);
+    border: 1px solid rgba(241, 196, 15, 0.7);
+    color: #fff;
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.cue-btn .cue-count { display: inline-block; min-width: 1.2em; margin-left: 4px; color: #f1c40f; }
+.cue-tool {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    border-radius: 6px;
+    padding: 5px 8px;
+    cursor: pointer;
+}
+
+/* ── 状態の切替（1つのボタンに今の状態を大きく出す）── */
+.live-tags { display: flex; flex-wrap: nowrap; gap: 6px; padding: 0; align-items: stretch; }
+.state-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    min-height: 48px;
+    padding: 4px 4px;
+    background: rgba(255,255,255,0.1);
+    border: 2px solid rgba(255,255,255,0.55);
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    font-family: inherit;
+}
+.state-btn small { font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.9); line-height: 1.1; }
+.state-btn b { font-size: 1rem; font-weight: 800; line-height: 1.15; white-space: nowrap; }
+.state-btn.is-set { background: rgba(241, 196, 15, 0.28); border-color: #f1c40f; }
+.state-btn.fs-tool { flex: 0 0 56px; }
+.state-input input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: #fff;
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 800;
+    padding: 0;
+    outline: none;
+    font-family: inherit;
+}
+.state-input input::placeholder { color: rgba(255,255,255,0.7); font-weight: 600; }
+
+/* ── きっかけ（横いっぱいに並べ、回数を大きく）── */
+.cue-bar { display: flex; flex-direction: column; align-items: stretch; gap: 3px; padding: 0; }
+.cue-bar .live-tag-label { font-size: 0.72rem; font-weight: 700; color: rgba(255,255,255,0.9); }
+.cue-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(74px, 1fr)); gap: 6px; }
+.cue-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 46px;
+    padding: 4px 6px;
+    background: rgba(241, 196, 15, 0.16);
+    border: 2px solid rgba(241, 196, 15, 0.85);
+    color: #fff;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 800;
+    white-space: nowrap;
+    font-family: inherit;
+}
+.cue-btn .cue-count { margin-left: 0; min-width: 0; color: #ffe066; font-size: 1.2em; font-weight: 800; }
+.cue-head { display: flex; align-items: center; gap: 6px; }
+.cue-head .live-tag-label { flex: 1; }
+.cue-tool {
+    min-height: 34px;
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.5);
+    color: #fff;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 2px 10px;
+    white-space: nowrap;
+    font-family: inherit;
+}
+/* 上の段は縮めない（縮むと文字が欠ける） */
+.analyst-banner, .match-info, .scoreboard, .gk-toggle, .live-tags, .cue-bar, .mode-row { flex-shrink: 0; }
+
+/* ── 見やすさ（文字の大きさ 標準 / 大 / 特大）──
+   ほとんどの文字は rem なので、土台の大きさを変えると全体が大きくなる。
+   「大」「特大」では、薄い文字と枠線も濃くし、押す所を広げる。 */
+html[data-fs="large"]  { font-size: 18.5px; }
+html[data-fs="xlarge"] { font-size: 21px; }
+html[data-fs="large"], html[data-fs="xlarge"] {
+    --text-muted: rgba(255, 255, 255, 0.96);
+    --border-color: rgba(255, 255, 255, 0.5);
+}
+html[data-fs="large"] body, html[data-fs="xlarge"] body { font-weight: 500; }
+
+/* 小さすぎる文字の下限をそろえる */
+html[data-fs="large"] .step-hint, html[data-fs="xlarge"] .step-hint,
+html[data-fs="large"] .table-note, html[data-fs="xlarge"] .table-note,
+html[data-fs="large"] .edit-label, html[data-fs="xlarge"] .edit-label { font-size: 0.85rem; color: #fff; }
+html[data-fs="large"] .player-btn, html[data-fs="xlarge"] .player-btn { font-size: 0.85rem; font-weight: 700; }
+html[data-fs="large"] .gk-btn, html[data-fs="xlarge"] .gk-btn { font-size: 0.9rem; font-weight: 700; padding: 8px 6px; }
+
+/* 押す所を広く、文字を太く */
+html[data-fs="large"] .sit-chip, html[data-fs="xlarge"] .sit-chip,
+html[data-fs="large"] .atk-chip, html[data-fs="xlarge"] .atk-chip { min-height: 44px; font-size: 0.88rem; color: #fff; }
+html[data-fs="large"] .zone-btn, html[data-fs="xlarge"] .zone-btn { font-size: 1.1rem; font-weight: 700; }
+html[data-fs="large"] .out-btn, html[data-fs="xlarge"] .out-btn { font-size: 0.9rem; color: #fff; border-width: 2px; }
+html[data-fs="large"] .course-mid .out-btn.side, html[data-fs="xlarge"] .course-mid .out-btn.side { flex-basis: 64px; }
+html[data-fs="large"] .gkmove-btn, html[data-fs="xlarge"] .gkmove-btn { min-height: 64px; font-size: 1.1rem; }
+html[data-fs="large"] .block-btn, html[data-fs="xlarge"] .block-btn { min-height: 52px; font-size: 1rem; color: #fff; }
+
+/* 選んだ状態を色だけに頼らず、太い枠でも示す */
+html[data-fs="large"] .sit-chip.selected, html[data-fs="xlarge"] .sit-chip.selected,
+html[data-fs="large"] .atk-chip.selected, html[data-fs="xlarge"] .atk-chip.selected,
+html[data-fs="large"] .gk-btn.active, html[data-fs="xlarge"] .gk-btn.active {
+    outline: 3px solid #fff;
+    outline-offset: -3px;
+}
+
+/* 文字を大きくした分、上の飾りを詰めてコートの高さを守る */
+html[data-fs="large"] .analyst-banner span, html[data-fs="xlarge"] .analyst-banner span { display: none; }
+html[data-fs="large"] .analyst-banner, html[data-fs="xlarge"] .analyst-banner { padding: 3px 8px; font-size: 0.8rem; }
+html[data-fs="large"] .scoreboard, html[data-fs="xlarge"] .scoreboard { padding: 4px 12px; }
+html[data-fs="large"] #app, html[data-fs="xlarge"] #app { gap: 6px; }
+html[data-fs="large"] .court-container, html[data-fs="xlarge"] .court-container { min-height: 190px; }
+html[data-fs="large"] .gk-toggle, html[data-fs="xlarge"] .gk-toggle { padding-top: 3px; padding-bottom: 3px; }

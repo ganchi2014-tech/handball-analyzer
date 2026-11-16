@@ -21,7 +21,7 @@
         });
       }
     </script>
-    <link rel="stylesheet" href="styles.css?v=a6">
+    <link rel="stylesheet" href="styles.css?v=a7">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
@@ -201,6 +201,16 @@
 
         <!-- Toast Notification -->
         <div id="toast" class="toast"></div>
+
+        <!-- 状態を選ぶ画面（退場・7人攻撃 / 相手守備 のボタンを押すと出る） -->
+        <div id="state-picker" class="modal-overlay hidden" style="z-index:190;">
+            <div class="modal-content">
+                <div class="modal-drag-handle"></div>
+                <h3 id="state-picker-title">選んでください</h3>
+                <div id="state-picker-options" class="state-picker-options"></div>
+                <button type="button" class="btn-cancel" id="state-picker-cancel">変えずに閉じる</button>
+            </div>
+        </div>
     </div>
 
     <!-- Action Action Sheet Modal -->
@@ -672,9 +682,9 @@
         </div>
     </div>
 
-    <script src="lib/roster.js?v=a6"></script>
-    <script src="lib/stats.js?v=a6"></script>
-    <script src="lib/csv.js?v=a6"></script>
-    <script src="app.js?v=a6"></script>
+    <script src="lib/roster.js?v=a7"></script>
+    <script src="lib/stats.js?v=a7"></script>
+    <script src="lib/csv.js?v=a7"></script>
+    <script src="app.js?v=a7"></script>
 </body>
 </html>

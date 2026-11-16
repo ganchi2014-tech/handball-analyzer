@@ -1119,17 +1119,58 @@ document.addEventListener('DOMContentLoaded', () => {
         const inp = document.getElementById('live-oppgk-input');
         if (inp && inp.value !== (state.oppGk || '')) inp.value = state.oppGk || '';
     }
-    // 押すたびに次の状態へ
+    // ボタンを押すと選択肢が出て、タップで選ぶ
+    const statePicker = document.getElementById('state-picker');
+    function closeStatePicker() { statePicker.classList.add('hidden'); }
+    function openStatePicker(title, options, current, onPick) {
+        document.getElementById('state-picker-title').textContent = title;
+        const box = document.getElementById('state-picker-options');
+        box.innerHTML = '';
+        options.forEach(opt => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'state-option' + (opt.value === current ? ' selected' : '');
+            const main = document.createElement('b');
+            main.textContent = opt.label;
+            b.appendChild(main);
+            if (opt.note) {
+                const note = document.createElement('small');
+                note.textContent = opt.note;
+                b.appendChild(note);
+            }
+            b.addEventListener('click', () => { onPick(opt.value); closeStatePicker(); });
+            box.appendChild(b);
+        });
+        statePicker.classList.remove('hidden');
+    }
+    document.getElementById('state-picker-cancel').addEventListener('click', closeStatePicker);
+    statePicker.addEventListener('click', (e) => { if (e.target === statePicker) closeStatePicker(); });
+
     document.getElementById('btn-state-numbers').addEventListener('click', () => {
-        state.numbers = NUMBERS_ORDER[(NUMBERS_ORDER.indexOf(state.numbers) + 1) % NUMBERS_ORDER.length];
-        applyLiveTagsToUI();
-        saveState();
-        showToast(NUMBERS_TOASTS[state.numbers]);
+        openStatePicker('退場・7人攻撃（今の状態）', [
+            { value: 'even',  label: 'なし',       note: 'ふつうの状態' },
+            { value: 'plus',  label: '相手が退場', note: 'こちらが1人多い' },
+            { value: 'minus', label: '味方が退場', note: 'こちらが1人少ない' },
+            { value: 'seven', label: '7人攻撃',    note: 'GKを下げて攻める' }
+        ], state.numbers, (v) => {
+            state.numbers = v;
+            applyLiveTagsToUI();
+            saveState();
+            showToast(NUMBERS_TOASTS[v]);
+        });
     });
     document.getElementById('btn-state-oppdef').addEventListener('click', () => {
-        state.oppDef = OPPDEF_ORDER[(OPPDEF_ORDER.indexOf(state.oppDef || '') + 1) % OPPDEF_ORDER.length];
-        applyLiveTagsToUI();
-        saveState();
+        openStatePicker('相手の守備の形', [
+            { value: '60',    label: '6:0' },
+            { value: '51',    label: '5:1' },
+            { value: '321',   label: '3:2:1' },
+            { value: 'other', label: '他', note: '上の3つ以外' },
+            { value: '',      label: '—', note: '決めない・分からない' }
+        ], state.oppDef || '', (v) => {
+            state.oppDef = v;
+            applyLiveTagsToUI();
+            saveState();
+        });
     });
     const liveOppGkInput = document.getElementById('live-oppgk-input');
     if (liveOppGkInput) {

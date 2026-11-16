@@ -58,18 +58,27 @@ function doPost(e) {
       rowsAdded = result.rowsAdded;
     }
 
+    // CSV の控えを Drive のフォルダに置く。ここが失敗しても、シートへの記録は済んでいるので送信は成功として返す
+    // （フォルダが見つからない・権限が無いときに、記録は入ったのに「送信失敗」と出るのを防ぐ）
+    var archived = false;
+    var archiveError = '';
     if (FOLDER_ID) {
-      var folder = DriveApp.getFolderById(FOLDER_ID);
-      var studentSafe = safeName(studentName);
-      var targetName  = (isAnalyst ? 'analyst__' : '') + studentSafe + '__' + filename;
-      var existing = folder.getFilesByName(targetName);
-      while (existing.hasNext()) {
-        existing.next().setTrashed(true);
+      try {
+        var folder = DriveApp.getFolderById(FOLDER_ID);
+        var studentSafe = safeName(studentName);
+        var targetName  = (isAnalyst ? 'analyst__' : '') + studentSafe + '__' + filename;
+        var existing = folder.getFilesByName(targetName);
+        while (existing.hasNext()) {
+          existing.next().setTrashed(true);
+        }
+        folder.createFile(targetName, csv, 'text/csv');
+        archived = true;
+      } catch (archiveErr) {
+        archiveError = String(archiveErr);
       }
-      folder.createFile(targetName, csv, 'text/csv');
     }
 
-    return jsonResponse({ ok: true, replaced: replaced, rowsAdded: rowsAdded, sheet: isAnalyst ? ANALYST_SHEET_NAME : '' });
+    return jsonResponse({ ok: true, replaced: replaced, rowsAdded: rowsAdded, sheet: isAnalyst ? ANALYST_SHEET_NAME : '', archived: archived, archiveError: archiveError });
   } catch (err) {
     var detail = (err && err.stack) ? err.stack : String(err);
     return jsonResponse({ ok: false, error: detail });

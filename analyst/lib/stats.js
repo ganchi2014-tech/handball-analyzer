@@ -119,9 +119,11 @@
     // ── 分析担当用 v2: 飛んだ先 / ミスの中身 / GKの最初の動き / きっかけ ──
     // course   : 飛んだ先。枠内 TL/TR/ML/MR/BL/BR、枠外 OL=左 / OR=右 / OTL=左上 / OTR=右上
     // missType : ミスの中身 out=枠外 / block=DFのブロック
-    // gkMove   : GKの動き（東岸先生の4段階） LV1=中間位置 / LV2=せーのドン / LV3=駆け引き / LV0=動かなかった / U=分からない
-    const GK_MOVES = ['LV1', 'LV2', 'LV3', 'LV0', 'U'];
-    const GK_MOVE_LABELS = { LV1: 'Lv1 中間位置', LV2: 'Lv2 せーのドン', LV3: 'Lv3 駆け引き', LV0: 'Lv0 動かなかった', U: '分からない' };
+    // gkMove   : GKが最初に動いた方向（シューター視点） L=左 / R=右 / F=前に出た / N=動かなかった / U=分からない
+    // gkLv     : GKのLv（東岸先生の4段階） LV1=中間位置 / LV2=せーのドン / LV3=駆け引き / LV0=動かなかった
+    const GK_MOVES = ['L', 'R', 'F', 'N', 'U'];
+    const GK_LVS = ['LV1', 'LV2', 'LV3', 'LV0'];
+    const GK_LV_LABELS = { LV1: 'Lv1 中間位置', LV2: 'Lv2 せーのドン', LV3: 'Lv3 駆け引き', LV0: 'Lv0 動かなかった' };
     const MISS_TYPES = ['out', 'block'];
     const OUT_COURSES = ['OL', 'OR', 'OTL', 'OTR'];
 
@@ -132,6 +134,19 @@
         if (!course || course.length < 2) return null;
         const c = course[course.length - 1];
         return c === 'L' ? 'L' : c === 'R' ? 'R' : null;
+    }
+
+    // 飛んだ先と GK が最初に動いた方向の関係。付けるのは事実2つだけで、関係はここで機械的に出す。
+    //   opposite=GKの逆 / same=GKと同じ側 / still=GKは動かなかった / front=GKが前に出た / unknown=分からない
+    // 注意: GKの立ち位置は記録に無いので、「逆」は動いた向きと飛んだ先が逆、という意味まで。
+    function gkRelation(s) {
+        if (!s || !GK_MOVES.includes(s.gkMove)) return null;
+        if (s.gkMove === 'U') return 'unknown';
+        if (s.gkMove === 'N') return 'still';
+        if (s.gkMove === 'F') return 'front';
+        const side = courseSide(s.course);
+        if (!side) return null;
+        return s.gkMove === side ? 'same' : 'opposite';
     }
 
     // GKの動きを付ける対象か（ブロックは対象外。相手のシュートは枠内だけ）
@@ -158,14 +173,29 @@
         return n;
     }
 
-    // GKの動き（段階）ごとの「入った数 / 枠内の数」。mode='attack' は相手GK、'defense' は自GK。
-    function aggregateGkMove(shots, mode) {
+    // GKとの関係ごとの「入った数 / 枠内の数」。mode='attack' は相手GK、'defense' は自GK。
+    function aggregateGkRelation(shots, mode) {
+        const keys = ['opposite', 'same', 'still', 'front', 'unknown', 'none'];
         const out = {};
-        GK_MOVES.concat(['none']).forEach(k => { out[k] = { g: 0, s: 0 }; });
+        keys.forEach(k => { out[k] = { g: 0, s: 0 }; });
         (shots || []).forEach(s => {
             if (!s || s.mode !== mode) return;
             if (s.result !== 'goal' && s.result !== 'save') return;
-            const k = GK_MOVES.includes(s.gkMove) ? s.gkMove : 'none';
+            const rel = gkRelation(s) || 'none';
+            out[rel].s++;
+            if (s.result === 'goal') out[rel].g++;
+        });
+        return out;
+    }
+
+    // GKのLvごとの「入った数 / 枠内の数」。mode='attack' は相手GK、'defense' は自GK。
+    function aggregateGkLv(shots, mode) {
+        const out = {};
+        GK_LVS.concat(['none']).forEach(k => { out[k] = { g: 0, s: 0 }; });
+        (shots || []).forEach(s => {
+            if (!s || s.mode !== mode) return;
+            if (s.result !== 'goal' && s.result !== 'save') return;
+            const k = GK_LVS.includes(s.gkLv) ? s.gkLv : 'none';
             out[k].s++;
             if (s.result === 'goal') out[k].g++;
         });
@@ -274,8 +304,8 @@
 
     window.HA = window.HA || {};
     window.HA.stats = {
-        GK_MOVES, GK_MOVE_LABELS, MISS_TYPES, OUT_COURSES, isOutCourse,
-        courseSide, needsGkMove, missingAfterTags, countMissingAfterTags, aggregateGkMove, countCues,
+        GK_MOVES, GK_LVS, GK_LV_LABELS, MISS_TYPES, OUT_COURSES, isOutCourse,
+        courseSide, gkRelation, needsGkMove, missingAfterTags, countMissingAfterTags, aggregateGkRelation, aggregateGkLv, countCues,
         computeScore,
         computeMatchQuickStats,
         computeDashboard,

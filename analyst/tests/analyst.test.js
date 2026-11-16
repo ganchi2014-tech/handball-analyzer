@@ -120,7 +120,7 @@ describe('HA.csv（分析担当用の列）', () => {
         const csv = HA.csv.matchToCsv({ date: '2026-11-16', opponent: '練習', shots: [] }, []);
         const header = csv.split('\n')[0];
         expect(header.includes(',x,y,situation,assist,trigger,')).toBe(true);
-        expect(header.endsWith(',miss_type,gk_move,opp_gk,numbers,opp_def,match_id')).toBe(true);
+        expect(header.endsWith(',miss_type,gk_move,opp_gk,numbers,opp_def,match_id,gk_lv')).toBe(true);
     });
     test('1件の行に状況・アシスト・きっかけが入る', () => {
         const shot = {
@@ -131,7 +131,7 @@ describe('HA.csv（分析担当用の列）', () => {
         expect(row[14]).toBe('free');
         expect(row[15]).toBe('R45');
         expect(row[16]).toBe('右45のカットインから');
-        expect(row.length).toBe(23);
+        expect(row.length).toBe(24);
     });
     test('未入力は空文字', () => {
         const row = HA.csv.shotToRow({ mode: 'attack', result: 'miss' }, {}, []);
@@ -171,22 +171,35 @@ describe('分析担当用 v2: 飛んだ先・GKの動き・きっかけ', () => 
         expect(HA.stats.missingAfterTags(full)).toEqual([]);
         expect(HA.stats.countMissingAfterTags([full, { mode: 'attack', result: 'goal' }])).toBe(1);
     });
-    test('GKの動き（段階）ごとの集計は枠内だけを数える', () => {
-        const shots = [
-            { mode: 'attack', result: 'goal', course: 'TL', gkMove: 'LV2' },
-            { mode: 'attack', result: 'save', course: 'TL', gkMove: 'LV2' },
-            { mode: 'attack', result: 'miss', course: 'OTL', gkMove: 'LV2' },
-            { mode: 'attack', result: 'goal', course: 'BR' },
-            { mode: 'defense', result: 'save', course: 'BL', gkMove: 'LV0' }
-        ];
-        const a = HA.stats.aggregateGkMove(shots, 'attack');
-        expect(a.LV2).toEqual({ g: 1, s: 2 });
-        expect(a.none).toEqual({ g: 1, s: 1 });
-        expect(HA.stats.aggregateGkMove(shots, 'defense').LV0).toEqual({ g: 0, s: 1 });
+    test('GKが動いた方向と飛んだ先から関係を出す（枠外も左右で見る）', () => {
+        expect(HA.stats.gkRelation({ gkMove: 'L', course: 'TL' })).toBe('same');
+        expect(HA.stats.gkRelation({ gkMove: 'L', course: 'BR' })).toBe('opposite');
+        expect(HA.stats.gkRelation({ gkMove: 'R', course: 'OTL' })).toBe('opposite');
+        expect(HA.stats.gkRelation({ gkMove: 'N', course: 'BR' })).toBe('still');
+        expect(HA.stats.gkRelation({ gkMove: 'F', course: 'ML' })).toBe('front');
+        expect(HA.stats.gkRelation({ gkMove: 'U', course: 'ML' })).toBe('unknown');
+        expect(HA.stats.gkRelation({ course: 'TL' })).toBe(null);
     });
-    test('前の版の値（左右など）は未入力として扱う', () => {
-        expect(HA.stats.missingAfterTags({ mode: 'attack', result: 'goal', course: 'TL', gkMove: 'L' })).toEqual(['gkMove']);
-        expect(HA.stats.missingAfterTags({ mode: 'attack', result: 'goal', course: 'TL', gkMove: 'LV3' })).toEqual([]);
+    test('GKとの関係・GKのLvごとの集計は枠内だけを数える', () => {
+        const shots = [
+            { mode: 'attack', result: 'goal', course: 'TL', gkMove: 'R', gkLv: 'LV2' },
+            { mode: 'attack', result: 'save', course: 'TL', gkMove: 'L', gkLv: 'LV2' },
+            { mode: 'attack', result: 'miss', course: 'OTL', gkMove: 'R', gkLv: 'LV2' },
+            { mode: 'attack', result: 'goal', course: 'BR' },
+            { mode: 'defense', result: 'save', course: 'BL', gkMove: 'L', gkLv: 'LV0' }
+        ];
+        const a = HA.stats.aggregateGkRelation(shots, 'attack');
+        expect(a.opposite).toEqual({ g: 1, s: 1 });
+        expect(a.same).toEqual({ g: 0, s: 1 });
+        expect(a.none).toEqual({ g: 1, s: 1 });
+        const lv = HA.stats.aggregateGkLv(shots, 'attack');
+        expect(lv.LV2).toEqual({ g: 1, s: 2 });
+        expect(lv.none).toEqual({ g: 1, s: 1 });
+        expect(HA.stats.aggregateGkLv(shots, 'defense').LV0).toEqual({ g: 0, s: 1 });
+    });
+    test('GKのLvは無くても未入力には数えない。方向は求める', () => {
+        expect(HA.stats.missingAfterTags({ mode: 'attack', result: 'goal', course: 'TL', gkMove: 'L' })).toEqual([]);
+        expect(HA.stats.missingAfterTags({ mode: 'attack', result: 'goal', course: 'TL', gkLv: 'LV3' })).toEqual(['gkMove']);
     });
     test('きっかけは攻守で分けて数える', () => {
         const cues = [
@@ -198,11 +211,11 @@ describe('分析担当用 v2: 飛んだ先・GKの動き・きっかけ', () => 
         expect(HA.stats.countCues([], 'attack')).toEqual({});
     });
     test('CSV: シュートの行に新しい列が入る', () => {
-        const shot = { mode: 'attack', result: 'miss', missType: 'out', course: 'OTR', gkMove: 'LV1',
-                       oppGk: '12', numbers: 'minus', oppDef: '51' };
+        const shot = { mode: 'attack', result: 'miss', missType: 'out', course: 'OTR', gkMove: 'L', gkLv: 'LV2',
+                       oppGk: '2', numbers: 'minus', oppDef: '51' };
         const row = HA.csv.shotToRow(shot, { date: '2026-11-16', opponent: 'Test' }, []);
         expect(row[7]).toBe('OTR');
-        expect(row.slice(17)).toEqual(['out', 'LV1', '12', 'minus', '51', '2026-11-16_Test']);
+        expect(row.slice(17)).toEqual(['out', 'L', '2', 'minus', '51', '2026-11-16_Test', 'LV2']);
     });
     test('CSV: きっかけは result=cue の行として末尾に付く', () => {
         const match = { date: '2026-11-16', opponent: 'Test',

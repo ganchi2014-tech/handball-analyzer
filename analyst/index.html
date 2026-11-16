@@ -21,7 +21,7 @@
         });
       }
     </script>
-    <link rel="stylesheet" href="styles.css?v=a8">
+    <link rel="stylesheet" href="styles.css?v=a9">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
@@ -105,20 +105,19 @@
 
         <!-- 分析担当用 v2: 試合中の切替（押すたびに次へ。今の状態が大きく出て、以後の記録すべてに付く） -->
         <div class="live-tags" id="live-tags">
-            <button type="button" class="state-btn" id="btn-state-numbers"><small>退場・7人攻撃</small><b id="state-numbers-text">なし</b></button>
+            <button type="button" class="state-btn" id="btn-state-numbers"><small>退場・7人</small><b id="state-numbers-text">なし</b></button>
             <button type="button" class="state-btn" id="btn-state-oppdef"><small>相手守備</small><b id="state-oppdef-text">—</b></button>
-            <label class="state-btn state-input"><small>相手GK</small>
-                <input type="text" id="live-oppgk-input" inputmode="numeric" maxlength="3" placeholder="番号">
-            </label>
-            <button type="button" class="state-btn fs-tool" id="btn-font-size"><small>文字</small><b id="font-size-text">大</b></button>
+            <button type="button" class="state-btn" id="btn-state-oppgk"><small>相手GK</small><b id="state-oppgk-text">—</b></button>
+            <button type="button" class="state-btn" id="btn-state-gklv"><small id="state-gklv-label">相手GKのLv</small><b id="state-gklv-text">—</b></button>
         </div>
 
         <!-- 分析担当用 v2: きっかけ（何を狙ったか）。シュートまで行かなくても、押すたびに1回数える -->
         <div class="cue-bar" id="cue-bar">
             <div class="cue-head">
-                <span class="live-tag-label" id="cue-side-label">きっかけ（押すたびに1回）</span>
+                <span class="live-tag-label" id="cue-side-label">きっかけ</span>
                 <button type="button" class="cue-tool" id="btn-cue-undo">↩ 取消</button>
                 <button type="button" class="cue-tool" id="btn-cue-edit">✎ 項目</button>
+                <button type="button" class="cue-tool fs-tool" id="btn-font-size">文字 <span id="font-size-text">大</span></button>
             </div>
             <div class="cue-buttons" id="cue-buttons"></div>
         </div>
@@ -306,14 +305,25 @@
 
             <!-- Step 1.7: GKの最初の動き（コースの次） -->
             <div id="step-gkmove" class="step hidden">
-                <h3>GKの動き</h3>
-                <div class="gkmove-grid">
-                    <button type="button" class="gkmove-btn" data-gkmove="LV1"><small>Lv1</small>中間位置</button>
-                    <button type="button" class="gkmove-btn" data-gkmove="LV2"><small>Lv2</small>せーのドン</button>
-                    <button type="button" class="gkmove-btn" data-gkmove="LV3"><small>Lv3</small>駆け引き</button>
-                    <button type="button" class="gkmove-btn" data-gkmove="LV0"><small>Lv0</small>動かなかった</button>
+                <h3 id="gkmove-step-title">GKの動き</h3>
+                <!-- 先に決めておいたGKのLv。このシュートだけ違ったら、押して変える（決めておいた方は変わらない） -->
+                <div class="gklv-shot">
+                    <div class="edit-label" id="gklv-shot-label">GKのLv（このシュートだけ変えるなら押す）</div>
+                    <div class="sit-chip-row" id="gklv-shot-row">
+                        <button type="button" class="sit-chip gklv-chip" data-gklv="LV1"><small>Lv1</small>中間位置</button>
+                        <button type="button" class="sit-chip gklv-chip" data-gklv="LV2"><small>Lv2</small>せーのドン</button>
+                        <button type="button" class="sit-chip gklv-chip" data-gklv="LV3"><small>Lv3</small>駆け引き</button>
+                        <button type="button" class="sit-chip gklv-chip" data-gklv="LV0"><small>Lv0</small>動かず</button>
+                    </div>
                 </div>
-                <p class="step-hint">見たままを</p>
+                <div class="edit-label" style="margin-top:10px;">GKが最初に動いた方向（押すと次へ進む）</div>
+                <div class="gkmove-grid">
+                    <button type="button" class="gkmove-btn" data-gkmove="L">← 左へ</button>
+                    <button type="button" class="gkmove-btn" data-gkmove="R">右へ →</button>
+                    <button type="button" class="gkmove-btn" data-gkmove="F">前に出た</button>
+                    <button type="button" class="gkmove-btn" data-gkmove="N">動かなかった</button>
+                </div>
+                <p class="step-hint">シューター視点。見たままを</p>
                 <button type="button" class="btn-skip" id="btn-gkmove-unknown">分からない</button>
                 <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
             </div>
@@ -472,14 +482,22 @@
             </div>
 
             <div class="edit-section" id="edit-gkmove-section">
-                <div class="edit-label">GKの動き（見たままを）</div>
+                <div class="edit-label">GKのLv</div>
+                <div class="sit-chip-row wrap" id="edit-gklv-row">
+                    <button type="button" class="sit-chip" data-gklv="LV1">Lv1 中間位置</button>
+                    <button type="button" class="sit-chip" data-gklv="LV2">Lv2 せーのドン</button>
+                    <button type="button" class="sit-chip" data-gklv="LV3">Lv3 駆け引き</button>
+                    <button type="button" class="sit-chip" data-gklv="LV0">Lv0 動かなかった</button>
+                </div>
+                <div class="edit-label" style="margin-top:8px;">GKが最初に動いた方向（シューター視点）</div>
                 <div class="sit-chip-row wrap" id="edit-gkmove-row">
-                    <button type="button" class="sit-chip" data-gkmove="LV1">Lv1 中間位置</button>
-                    <button type="button" class="sit-chip" data-gkmove="LV2">Lv2 せーのドン</button>
-                    <button type="button" class="sit-chip" data-gkmove="LV3">Lv3 駆け引き</button>
-                    <button type="button" class="sit-chip" data-gkmove="LV0">Lv0 動かなかった</button>
+                    <button type="button" class="sit-chip" data-gkmove="L">左へ</button>
+                    <button type="button" class="sit-chip" data-gkmove="R">右へ</button>
+                    <button type="button" class="sit-chip" data-gkmove="F">前に出た</button>
+                    <button type="button" class="sit-chip" data-gkmove="N">動かなかった</button>
                     <button type="button" class="sit-chip" data-gkmove="U">分からない</button>
                 </div>
+            </div>
             </div>
 
             <div class="edit-section" id="edit-trigger-section">
@@ -682,9 +700,9 @@
         </div>
     </div>
 
-    <script src="lib/roster.js?v=a8"></script>
-    <script src="lib/stats.js?v=a8"></script>
-    <script src="lib/csv.js?v=a8"></script>
-    <script src="app.js?v=a8"></script>
+    <script src="lib/roster.js?v=a9"></script>
+    <script src="lib/stats.js?v=a9"></script>
+    <script src="lib/csv.js?v=a9"></script>
+    <script src="app.js?v=a9"></script>
 </body>
 </html>

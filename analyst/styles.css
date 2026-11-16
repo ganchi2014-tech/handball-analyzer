@@ -1821,3 +1821,7 @@ html[data-fs="large"] #match-opponent, html[data-fs="xlarge"] #match-opponent { 
 .state-option b { font-size: 1.25rem; font-weight: 800; line-height: 1.2; }
 .state-option small { font-size: 0.8rem; font-weight: 600; color: rgba(255,255,255,0.92); }
 .state-option.selected { background: rgba(241, 196, 15, 0.3); border-color: #f1c40f; outline: 3px solid #f1c40f; outline-offset: -3px; }
+
+/* GKの動き（段階）: 段階の番号を小さく上に、名前を大きく */
+.gkmove-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-family: inherit; }
+.gkmove-btn small { font-size: 0.8rem; font-weight: 800; color: #f1c40f; }

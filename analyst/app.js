@@ -1693,6 +1693,83 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // この記録を CSV で書き出す（分析担当用: 送信の代わり）
+    // ── 分析担当用: 分析用のシート（生徒とは別）へ送る ──
+    //   受け側が新しい版（別シートに分けられる版）のときだけ送る。古い版には送らない。
+    const ANALYST_NAME_DEFAULT = '白谷';
+    async function sendMatchToAnalystSheet(match) {
+        const statusEl = document.getElementById('analyst-send-status');
+        const setStatus = (cls, msg) => {
+            if (!statusEl) return;
+            statusEl.classList.remove('hidden');
+            statusEl.className = 'submit-status ' + cls;
+            statusEl.textContent = msg;
+        };
+        if (!match || ((match.shots || []).length === 0 && (match.cues || []).length === 0)) {
+            showToast('⚠ 記録がありません');
+            return { ok: false, empty: true };
+        }
+        if (!match.date || !match.opponent) {
+            setStatus('error', '日付と対戦相手を入れてから送ってください（同じ試合の上書きに使います）');
+            return { ok: false, error: 'no date/opponent' };
+        }
+        const url = getSubmitUrl();
+        setStatus('', '📨 送信中…');
+        try {
+            // 1) 受け側の版を確かめる
+            let ver = 0;
+            try {
+                const chk = await fetch(url, { method: 'GET' });
+                const info = JSON.parse(await chk.text());
+                ver = Number(info && info.version) || 0;
+            } catch (e) { ver = 0; }
+            if (ver < 2) {
+                setStatus('error', '受け側がまだ古い版です。生徒の記録に混ざるのを防ぐため、送っていません。CSVの書き出しは使えます。');
+                return { ok: false, error: 'old endpoint' };
+            }
+            // 2) 送る
+            const userName = (localStorage.getItem(SUBMIT_NAME_KEY) || '').trim() || ANALYST_NAME_DEFAULT;
+            const filename = `analyst_${HA.csv.safeFilenamePart(match.date)}_${HA.csv.safeFilenamePart(match.opponent)}.csv`;
+            const res = await fetch(url, {
+                method: 'POST',
+                // text/plain で送ることで CORS preflight を回避
+                body: JSON.stringify({
+                    app: 'analyst',
+                    studentName: userName,
+                    matchDate: match.date,
+                    opponent: match.opponent,
+                    filename,
+                    csv: HA.csv.matchToCsv(match)
+                })
+            });
+            const text = await res.text();
+            let data = null;
+            try { data = JSON.parse(text); } catch (e) { throw new Error('想定外の返事: ' + text.slice(0, 80)); }
+            if (!data.ok) throw new Error(data.error || 'unknown');
+            if (!data.sheet) throw new Error('分析用のシートに入ったか確認できません');
+            const msg = (data.replaced ? '🔄 同じ試合を上書きしました' : '✅ 送信しました') + `（${data.rowsAdded || 0}行）`;
+            setStatus('success', msg);
+            showToast(msg);
+            return { ok: true };
+        } catch (e) {
+            setStatus('error', '送信できませんでした: ' + e.message);
+            return { ok: false, error: e.message };
+        }
+    }
+    const btnAnalystSend = document.getElementById('btn-analyst-send');
+    if (btnAnalystSend) {
+        btnAnalystSend.addEventListener('click', async () => {
+            const match = state.viewMatch || {
+                date: ui.dateInput.value,
+                opponent: ui.opponentInput.value,
+                shots: state.shots,
+                cues: state.cues
+            };
+            btnAnalystSend.disabled = true;
+            await sendMatchToAnalystSheet(match);
+            btnAnalystSend.disabled = false;
+        });
+    }
+
     const btnSummaryCsv = document.getElementById('btn-summary-csv');
     if (btnSummaryCsv) {
         btnSummaryCsv.addEventListener('click', () => {

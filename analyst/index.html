@@ -21,7 +21,7 @@
         });
       }
     </script>
-    <link rel="stylesheet" href="styles.css?v=a4">
+    <link rel="stylesheet" href="styles.css?v=a5">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
@@ -65,7 +65,7 @@
 <body>
     <div id="app" class="attack-mode">
         <!-- 分析担当用の表示（生徒用と取り違えないため） -->
-        <div class="analyst-banner">📋 分析担当用<span>選手用アプリ・先生用の表には送信しません</span></div>
+        <div class="analyst-banner">📋 分析担当用<span>選手の記録とは別のシートにたまります</span></div>
         <!-- Match Info -->
         <div class="match-info">
             <input type="date" id="match-date" class="info-input">
@@ -639,6 +639,8 @@
             </div>
 
             <div class="summary-actions" style="margin-top: 15px;">
+                <button type="button" class="btn-action" id="btn-analyst-send" style="background:#f1c40f; width:100%; padding: 14px; border:none; color:#1b1b1b; font-weight:bold; border-radius:8px; margin-bottom:6px;">📨 この試合を分析用のシートに送る</button>
+                <div id="analyst-send-status" class="submit-status hidden" style="margin-bottom:8px;"></div>
                 <button type="button" class="btn-action" id="btn-summary-csv" style="background:var(--success); width:100%; padding: 14px; border:none; color:#fff; font-weight:bold; border-radius:8px; margin-bottom:8px;">📤 この記録をCSVで書き出す</button>
                 <div style="display:flex; gap:10px; margin-bottom:8px;">
                     <button type="button" class="btn-action" id="btn-summary-archive" style="background:rgba(155,89,182,0.4); border:1px solid rgba(155,89,182,0.7); flex:1; padding: 14px; color:#fff; font-weight:bold; border-radius:8px;">📚 履歴に保存</button>
@@ -665,9 +667,9 @@
         </div>
     </div>
 
-    <script src="lib/roster.js?v=a4"></script>
-    <script src="lib/stats.js?v=a4"></script>
-    <script src="lib/csv.js?v=a4"></script>
-    <script src="app.js?v=a4"></script>
+    <script src="lib/roster.js?v=a5"></script>
+    <script src="lib/stats.js?v=a5"></script>
+    <script src="lib/csv.js?v=a5"></script>
+    <script src="app.js?v=a5"></script>
 </body>
 </html>

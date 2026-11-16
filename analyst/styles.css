@@ -1829,7 +1829,7 @@ html[data-fs="large"] #match-opponent, html[data-fs="xlarge"] #match-opponent { 
 /* GKのLv（シュートの画面の上に出す。先に決めておいたものが選ばれた状態で出る） */
 .gklv-shot { margin-bottom: 4px; }
 .gklv-chip { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 6px 2px; font-size: 0.78rem; white-space: nowrap; }
-.gklv-chip small { font-size: 0.78rem; font-weight: 800; color: #f1c40f; }
+.gklv-chip small { font-size: 1.2rem; font-weight: 800; color: #f1c40f; }
 html[data-fs="large"] .gklv-chip, html[data-fs="xlarge"] .gklv-chip { font-size: 0.78rem; min-height: 52px; }
 .gklv-chip.selected { background: rgba(241, 196, 15, 0.3); border-color: #f1c40f; }
 .cue-tool.fs-tool { padding: 2px 8px; }

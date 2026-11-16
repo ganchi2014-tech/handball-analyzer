@@ -1442,3 +1442,7 @@ body {
 .state-option b { font-size: 1.15rem; font-weight: 800; }
 .state-option small { font-size: 0.78rem; font-weight: 600; color: rgba(255,255,255,0.9); }
 .state-option.selected { background: rgba(241, 196, 15, 0.3); border-color: #f1c40f; }
+
+/* ── 得点の帯を1段にして、コートを広く使う（縦が短いスマホ向け） ── */
+.scoreboard .timer { flex-wrap: nowrap; width: auto; flex: 1 1 auto; gap: 6px; }
+.scoreboard .team { width: auto; flex: 0 0 22%; }

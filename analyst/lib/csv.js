@@ -8,8 +8,7 @@
                      // 分析担当用の追加列（状況 / 失点のアシスト / きっかけメモ）
                      'situation', 'assist', 'trigger',
                      // v2: 映像を見て後から足す項目 / 試合中の切替 / 試合をまたぐ鍵
-                     'miss_type', 'gk_move', 'start_from', 'start_how', 'opp_no',
-                     'opp_gk', 'numbers', 'opp_def', 'match_id'];
+                     'miss_type', 'gk_move', 'opp_gk', 'numbers', 'opp_def', 'match_id'];
 
     function escape(v) {
         const s = v == null ? '' : String(v);
@@ -43,9 +42,6 @@
             shot.trigger || '',
             shot.missType || '',
             shot.gkMove || '',
-            shot.startFrom || '',
-            shot.startHow || '',
-            shot.oppNo || '',
             shot.oppGk || '',
             shot.numbers || '',
             shot.oppDef || '',
@@ -53,11 +49,23 @@
         ];
     }
 
+    // きっかけ1回を1行にする（result は 'cue'、項目名は trigger の列）。
+    // シュートの記録とは別物なので、集計するときは result で分ける。
+    function cueToRow(cue, match) {
+        return shotToRow({
+            period: cue.period, time: cue.time, mode: cue.mode, result: 'cue',
+            trigger: cue.kind, oppGk: cue.oppGk, numbers: cue.numbers, oppDef: cue.oppDef
+        }, match, []);
+    }
+
     function matchToCsv(match, roster) {
         const r = roster || (window.HA && window.HA.roster && window.HA.roster.load ? window.HA.roster.load() : null);
         const lines = [HEADERS.map(escape).join(',')];
         ((match && match.shots) || []).forEach(s => {
             lines.push(shotToRow(s, match, r).map(escape).join(','));
+        });
+        ((match && match.cues) || []).forEach(c => {
+            lines.push(cueToRow(c, match).map(escape).join(','));
         });
         return lines.join('\n');
     }
@@ -68,6 +76,9 @@
         (matches || []).forEach(match => {
             ((match && match.shots) || []).forEach(s => {
                 lines.push(shotToRow(s, match, r).map(escape).join(','));
+            });
+            ((match && match.cues) || []).forEach(c => {
+                lines.push(cueToRow(c, match).map(escape).join(','));
             });
         });
         return lines.join('\n');
@@ -128,6 +139,7 @@
         HEADERS,
         escape,
         shotToRow,
+        cueToRow,
         matchToCsv,
         matchesToCsv,
         safeFilenamePart,

@@ -44,7 +44,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // 分析担当用 v2: 試合中の切替（押した状態が以後の記録に付く）
         numbers: 'even',       // even=同数 / plus=多い / minus=少ない / seven=7人攻撃
         oppDef: '',            // 相手の守備の形 60 / 51 / 321 / other（未選択は空）
-        oppGk: ''              // 相手GKの背番号
+        oppGk: '',             // 相手GKの背番号
+        cues: []               // きっかけ（何を狙ったか）を押した記録 [{id, kind, mode, period, time, ...}]
     };
 
     const LINEUP_MAX = 6;
@@ -141,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 numbers: state.numbers,
                 oppDef: state.oppDef,
                 oppGk: state.oppGk,
+                cues: state.cues,
                 savedAt: Date.now()
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
@@ -175,6 +177,8 @@ document.addEventListener('DOMContentLoaded', () => {
             state.numbers = ['even', 'plus', 'minus', 'seven'].includes(snap.numbers) ? snap.numbers : 'even';
             state.oppDef = ['60', '51', '321', 'other'].includes(snap.oppDef) ? snap.oppDef : '';
             state.oppGk = typeof snap.oppGk === 'string' ? snap.oppGk : '';
+            state.cues = Array.isArray(snap.cues) ? snap.cues : [];
+            if (typeof renderCueBar === 'function') renderCueBar();
             if (typeof applyLiveTagsToUI === 'function') applyLiveTagsToUI();
 
             // Mode radio + classes
@@ -745,6 +749,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let pendingAssistShotId = null;
 
     function resetAnalystSteps() {
+        const g = document.getElementById('step-gkmove');
+        if (g) g.classList.add('hidden');
         stepSituation.classList.add('hidden');
         stepAssist.classList.add('hidden');
         attackTypeRow.style.display = '';
@@ -756,13 +762,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function proceedAfterResult() {
         const d = state.currentDraftShot;
         if (!d) return;
-        if (d.result === 'goal' || d.result === 'save') {
-            ui.stepCourse.classList.remove('hidden');
-        } else if (state.mode === 'attack') {
-            ui.stepPlayer.classList.remove('hidden');
-        } else {
-            addShotAndClose();
-        }
+        // v2: ミスでも飛んだ先を聞く（枠外4つ か ブロック）。結果に合わない所は押せない。
+        d.missType = null;
+        const wrap = document.getElementById('course-wrap');
+        if (wrap) wrap.setAttribute('data-result', d.result || '');
+        ui.stepCourse.classList.remove('hidden');
     }
 
     // 結果の次は状況を聞く（7m は状況なし）
@@ -800,6 +804,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.stepPlayer.classList.add('hidden');
         ui.stepToReason.classList.add('hidden');
         stepSituation.classList.add('hidden');
+        document.getElementById('step-gkmove').classList.add('hidden');
         stepAssist.classList.remove('hidden');
         attackTypeRow.style.display = 'none';
         modalTitle.textContent = '失点を記録しました';
@@ -871,8 +876,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Course selection
+    const stepGkMove = document.getElementById('step-gkmove');
     function proceedAfterCourse() {
         ui.stepCourse.classList.add('hidden');
+        // v2: 次はGKの最初の動き（ブロックと、相手の枠外は聞かない）
+        if (HA.stats.needsGkMove(state.currentDraftShot)) {
+            stepGkMove.classList.remove('hidden');
+        } else {
+            proceedAfterGkMove();
+        }
+    }
+    function proceedAfterGkMove() {
+        stepGkMove.classList.add('hidden');
         if (state.mode === 'attack') {
             ui.stepPlayer.classList.remove('hidden');
         } else {
@@ -883,9 +898,35 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('#step-course .zone-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             if (!state.currentDraftShot) return;
-            state.currentDraftShot.course = e.target.getAttribute('data-course');
+            // e.target は <br> を含むボタンでも拾えるよう closest で取る
+            const course = e.target.closest('.zone-btn').getAttribute('data-course');
+            state.currentDraftShot.course = course;
+            if (state.currentDraftShot.result === 'miss') {
+                state.currentDraftShot.missType = HA.stats.isOutCourse(course) ? 'out' : null;
+            }
             proceedAfterCourse();
         });
+    });
+    const btnCourseBlock = document.getElementById('btn-course-block');
+    if (btnCourseBlock) {
+        btnCourseBlock.addEventListener('click', () => {
+            if (!state.currentDraftShot) return;
+            state.currentDraftShot.course = null;
+            state.currentDraftShot.missType = 'block';
+            proceedAfterCourse();
+        });
+    }
+    document.querySelectorAll('#step-gkmove .gkmove-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (!state.currentDraftShot) return;
+            state.currentDraftShot.gkMove = btn.getAttribute('data-gkmove');
+            proceedAfterGkMove();
+        });
+    });
+    document.getElementById('btn-gkmove-unknown').addEventListener('click', () => {
+        if (!state.currentDraftShot) return;
+        state.currentDraftShot.gkMove = 'U';
+        proceedAfterGkMove();
     });
 
     if (ui.btnSkipCourse) {
@@ -1019,7 +1060,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!afterTagChip) return;
         const n = HA.stats.countMissingAfterTags(state.shots);
         afterTagChip.classList.toggle('hidden', n === 0);
-        afterTagChip.textContent = n > 0 ? `🎬 映像を見て足す 未入力 ${n}件　▶ 順に足す` : '';
+        afterTagChip.textContent = n > 0 ? `飛んだ先・GKの動き 未入力 ${n}件　▶ 順に足す` : '';
     }
     function nextMissingAfterTag(afterId) {
         // 記録した順に、まだ足りていない次の1本を返す（afterId の後ろを優先、無ければ先頭から）
@@ -1050,7 +1091,9 @@ document.addEventListener('DOMContentLoaded', () => {
         state.numbers = 'even';
         state.oppDef = '';
         state.oppGk = '';
+        state.cues = [];
         applyLiveTagsToUI();
+        renderCueBar();
     }
     function applyLiveTagsToUI() {
         document.querySelectorAll('#live-numbers-row .sit-chip').forEach(c => {
@@ -1086,6 +1129,70 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     applyLiveTagsToUI();
+
+    // ── 分析担当用 v2: きっかけ（何を狙ったか）を押して数える ──
+    //   シュートまで行かなくても1回。今の攻守の切替（オフェンス=自チーム / ディフェンス=相手）で分けて数える。
+    const CUE_KINDS_KEY = 'handball-analyst-cue-kinds-v1';
+    const DEFAULT_CUE_KINDS = ['1対1', 'クロス', 'ポスト', 'ミドル'];
+    function loadCueKinds() {
+        try {
+            const raw = JSON.parse(localStorage.getItem(CUE_KINDS_KEY) || 'null');
+            if (Array.isArray(raw) && raw.length > 0) return raw.filter(k => typeof k === 'string' && k.trim()).slice(0, 8);
+        } catch (e) {}
+        return DEFAULT_CUE_KINDS.slice();
+    }
+    let cueKinds = loadCueKinds();
+    function renderCueBar() {
+        const box = document.getElementById('cue-buttons');
+        if (!box) return;
+        const counts = HA.stats.countCues(state.cues, state.mode);
+        box.innerHTML = '';
+        cueKinds.forEach(kind => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'cue-btn';
+            b.appendChild(document.createTextNode(kind));
+            const n = document.createElement('span');
+            n.className = 'cue-count';
+            n.textContent = String(counts[kind] || 0);
+            b.appendChild(n);
+            b.addEventListener('click', () => {
+                const cue = { id: Date.now(), kind, mode: state.mode, period: state.period, time: state.timer.seconds };
+                stampLiveTags(cue);
+                state.cues.push(cue);
+                saveState();
+                renderCueBar();
+            });
+            box.appendChild(b);
+        });
+        const label = document.getElementById('cue-side-label');
+        if (label) label.textContent = state.mode === 'defense' ? '相手のきっかけ' : 'きっかけ';
+    }
+    document.getElementById('btn-cue-undo').addEventListener('click', () => {
+        // 今の攻守の側で、最後に押した1回を取り消す
+        for (let i = state.cues.length - 1; i >= 0; i--) {
+            if (state.cues[i].mode === state.mode) {
+                const removed = state.cues.splice(i, 1)[0];
+                saveState();
+                renderCueBar();
+                showToast(`↩ 「${removed.kind}」を1回取り消し`);
+                return;
+            }
+        }
+        showToast('取り消す記録がありません');
+    });
+    document.getElementById('btn-cue-edit').addEventListener('click', () => {
+        const input = window.prompt('きっかけの項目を「、」で区切って入力（最大8つ）', cueKinds.join('、'));
+        if (input == null) return;
+        const list = input.split(/[、,]/).map(x => x.trim()).filter(Boolean).slice(0, 8);
+        if (list.length === 0) return;
+        cueKinds = list;
+        try { localStorage.setItem(CUE_KINDS_KEY, JSON.stringify(cueKinds)); } catch (e) {}
+        renderCueBar();
+    });
+    ui.modeAttack.addEventListener('change', renderCueBar);
+    ui.modeDefense.addEventListener('change', renderCueBar);
+    renderCueBar();
 
     // 相手を「練習」にするボタン
     const btnPractice = document.getElementById('btn-practice');
@@ -1140,7 +1247,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const match = state.viewMatch || {
                 date: ui.dateInput.value,
                 opponent: ui.opponentInput.value,
-                shots: state.shots
+                shots: state.shots,
+                cues: state.cues
             };
             if (!match.shots || match.shots.length === 0) {
                 showToast('⚠ シュート記録がありません');
@@ -1513,6 +1621,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 相手の点の取り方
         const op = HA.stats.aggregateOpponentPatterns(shotsData);
+        // v2: きっかけの回数（自チーム / 相手）
+        const cuesEl = document.getElementById('summary-cues');
+        if (cuesEl) {
+            const cues = state.viewMatch ? (state.viewMatch.cues || []) : state.cues;
+            const line = (label, counts) => {
+                const keys = Object.keys(counts);
+                if (keys.length === 0) return `<div>${label}: 記録なし</div>`;
+                return `<div>${label}: ` + keys.map(k => `${escHtml(k)} ${counts[k]}回`).join(' / ') + '</div>';
+            };
+            cuesEl.innerHTML = line('自チーム', HA.stats.countCues(cues, 'attack'))
+                             + line('相手', HA.stats.countCues(cues, 'defense'));
+        }
         const sitEl = document.getElementById('opponent-situation');
         const astEl = document.getElementById('opponent-assist');
         const patEl = document.getElementById('opponent-patterns');
@@ -1554,7 +1674,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const match = state.viewMatch || {
                 date: ui.dateInput.value,
                 opponent: ui.opponentInput.value,
-                shots: state.shots
+                shots: state.shots,
+                cues: state.cues
             };
             if (!match.shots || match.shots.length === 0) {
                 showToast('⚠ 記録がありません');
@@ -1853,7 +1974,7 @@ document.addEventListener('DOMContentLoaded', () => {
             c.classList.toggle('selected', c.getAttribute('data-atk') === (shot.attackType || 'set'));
         });
         // Course
-        document.querySelectorAll('#edit-course-grid .zone-btn').forEach(b => {
+        document.querySelectorAll('#edit-course-section .zone-btn').forEach(b => {
             b.classList.toggle('selected', b.getAttribute('data-course') === shot.course);
         });
         // v2: 飛んだ先はミスでも付ける（枠の外も近い所で）
@@ -1866,13 +1987,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('#edit-gkmove-row .sit-chip').forEach(c => {
             c.classList.toggle('selected', c.getAttribute('data-gkmove') === shot.gkMove);
         });
-        document.querySelectorAll('#edit-startfrom-row .sit-chip').forEach(c => {
-            c.classList.toggle('selected', c.getAttribute('data-startfrom') === shot.startFrom);
-        });
-        document.querySelectorAll('#edit-starthow-row .sit-chip').forEach(c => {
-            c.classList.toggle('selected', c.getAttribute('data-starthow') === shot.startHow);
-        });
-        document.getElementById('edit-oppno-input').value = shot.oppNo || '';
+
         // 分析担当用: 状況 / アシスト / きっかけ
         document.getElementById('edit-situation-section').classList.toggle('hidden', !HA.stats.needsSituation(shot));
         document.querySelectorAll('#edit-situation-row .sit-chip').forEach(c => {
@@ -1898,11 +2013,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // v2: 結果・攻撃種別に応じて、後から足す項目の出し入れを決める
     function refreshEditV2Sections(shot, result, atk) {
         const isShot = (result === 'goal' || result === 'save' || result === 'miss');
-        const isSet = (atk || 'set') === 'set';
         document.getElementById('edit-misstype-section').classList.toggle('hidden', result !== 'miss');
         document.getElementById('edit-gkmove-section').classList.toggle('hidden', !isShot);
-        document.getElementById('edit-start-section').classList.toggle('hidden', !(isShot && isSet));
-        document.getElementById('edit-oppno-section').classList.toggle('hidden', !(shot && shot.mode === 'defense' && isShot));
     }
 
     function updateEditPlayerDisplay(player) {
@@ -1942,7 +2054,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // 分析担当用: 状況 / アシスト のチップ（もう一度押すと選択を外す）
-    ['#edit-situation-row', '#edit-assist-row', '#edit-misstype-row', '#edit-gkmove-row', '#edit-startfrom-row', '#edit-starthow-row'].forEach(sel => {
+    ['#edit-situation-row', '#edit-assist-row', '#edit-misstype-row', '#edit-gkmove-row'].forEach(sel => {
         document.querySelectorAll(sel + ' .sit-chip').forEach(chip => {
             chip.addEventListener('click', () => {
                 const was = chip.classList.contains('selected');
@@ -1953,14 +2065,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Edit course buttons
-    document.querySelectorAll('#edit-course-grid .zone-btn').forEach(btn => {
+    document.querySelectorAll('#edit-course-section .zone-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('#edit-course-grid .zone-btn').forEach(b => b.classList.remove('selected'));
+            document.querySelectorAll('#edit-course-section .zone-btn').forEach(b => b.classList.remove('selected'));
             btn.classList.add('selected');
         });
     });
     document.getElementById('edit-course-clear').addEventListener('click', () => {
-        document.querySelectorAll('#edit-course-grid .zone-btn').forEach(b => b.classList.remove('selected'));
+        document.querySelectorAll('#edit-course-section .zone-btn').forEach(b => b.classList.remove('selected'));
     });
 
     // Player picker (inline expansion)
@@ -2005,7 +2117,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const savedId = shot.id;
         const newResult = document.querySelector('#edit-result-row .edit-result-btn.selected')?.getAttribute('data-result') || shot.result;
         const newAtk = document.querySelector('#edit-attack-type-row .atk-chip.selected')?.getAttribute('data-atk') || 'set';
-        const newCourse = document.querySelector('#edit-course-grid .zone-btn.selected')?.getAttribute('data-course') || null;
+        const newCourse = document.querySelector('#edit-course-section .zone-btn.selected')?.getAttribute('data-course') || null;
         shot.result = newResult;
         shot.attackType = newAtk;
         // v2: 飛んだ先はミスでも残す
@@ -2014,16 +2126,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const isShotNow = (newResult === 'goal' || newResult === 'save' || newResult === 'miss');
         shot.missType = (newResult === 'miss') ? pick('#edit-misstype-row', 'data-misstype') : null;
         shot.gkMove = isShotNow ? pick('#edit-gkmove-row', 'data-gkmove') : null;
-        if (isShotNow && newAtk === 'set') {
-            shot.startFrom = pick('#edit-startfrom-row', 'data-startfrom');
-            shot.startHow = pick('#edit-starthow-row', 'data-starthow');
-        } else {
-            shot.startFrom = null;
-            shot.startHow = null;
+// 飛んだ先とミスの中身をそろえる: 枠外を選んだら「枠の外」、ブロックなら飛んだ先は空
+        if (newResult === 'miss') {
+            if (HA.stats.isOutCourse(shot.course)) shot.missType = 'out';
+            else if (shot.missType === 'block') shot.course = null;
+        } else if (HA.stats.isOutCourse(shot.course)) {
+            shot.course = null; // 得点・セーブに枠外は付かない
         }
-        shot.oppNo = (shot.mode === 'defense' && isShotNow)
-            ? (document.getElementById('edit-oppno-input').value.trim() || null)
-            : null;
         // 分析担当用: 状況 / アシスト / きっかけ
         shot.situation = HA.stats.needsSituation(shot)
             ? (document.querySelector('#edit-situation-row .sit-chip.selected')?.getAttribute('data-situation') || null)
@@ -2174,7 +2283,8 @@ document.addEventListener('DOMContentLoaded', () => {
             submitMatchToTeacher({
                 date: ui.dateInput.value,
                 opponent: ui.opponentInput.value,
-                shots: state.shots
+                shots: state.shots,
+                cues: state.cues
             });
         });
     }
@@ -2320,6 +2430,7 @@ document.addEventListener('DOMContentLoaded', () => {
             opponent: ui.opponentInput.value || '',
             score: { us: state.score.us, opponent: state.score.opponent },
             shots: state.shots.map(s => ({ ...s })),
+            cues: state.cues.map(c => ({ ...c })),
             timerSeconds: state.timer.seconds,
             cloudMatchId: state.cloudMatchId || null, // クラウド送信済みなら同じIDを引き継ぐ
             archivedAt: Date.now()
@@ -2382,7 +2493,8 @@ document.addEventListener('DOMContentLoaded', () => {
             exportMatchCsv({
                 date: ui.dateInput.value,
                 opponent: ui.opponentInput.value,
-                shots: state.shots
+                shots: state.shots,
+                cues: state.cues
             });
         });
     }

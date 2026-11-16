@@ -116,19 +116,21 @@
     }
 
 
-    // ── 分析担当用 v2: 映像を見て後から足す項目 ──
-    // gkMove   : GKの最初の動き（シューター視点） L=左 / R=右 / F=前に出た / N=動かなかった / U=分からない
+    // ── 分析担当用 v2: 飛んだ先 / ミスの中身 / GKの最初の動き / きっかけ ──
+    // course   : 飛んだ先。枠内 TL/TR/ML/MR/BL/BR、枠外 OL=左 / OR=右 / OTL=左上 / OTR=右上
     // missType : ミスの中身 out=枠外 / block=DFのブロック
-    // startFrom: 攻撃の始まり（誰から） L45 / C / R45 / LW / RW / PV
-    // startHow : 攻撃の始まり（何で）   1on1 / cross / post / middle / other
+    // gkMove   : GKの最初の動き（シューター視点） L=左 / R=右 / F=前に出た / N=動かなかった / U=分からない
     const GK_MOVES = ['L', 'R', 'F', 'N', 'U'];
     const MISS_TYPES = ['out', 'block'];
-    const START_FROM = ['L45', 'C', 'R45', 'LW', 'RW', 'PV'];
-    const START_HOW = ['1on1', 'cross', 'post', 'middle', 'other'];
+    const OUT_COURSES = ['OL', 'OR', 'OTL', 'OTR'];
 
+    function isOutCourse(course) { return OUT_COURSES.includes(course); }
+
+    // 飛んだ先の左右（最後の文字で決まる）
     function courseSide(course) {
         if (!course || course.length < 2) return null;
-        return course[1] === 'L' ? 'L' : course[1] === 'R' ? 'R' : null;
+        const c = course[course.length - 1];
+        return c === 'L' ? 'L' : c === 'R' ? 'R' : null;
     }
 
     // 飛んだ先と GK の最初の動きの関係。付けるのは事実2つだけで、関係はここで機械的に出す。
@@ -143,23 +145,21 @@
         return s.gkMove === side ? 'same' : 'opposite';
     }
 
-    // 後から足す項目のうち、まだ入っていないもの（第1段階の決まり）
-    //   自チームのシュート: 全部に「飛んだ先・GKの動き」、ミスは中身、セット攻撃は始まり方
-    //   相手のシュート    : 枠内は「GKの動き」、失点（セット）は始まり方
+    // GKの動きを付ける対象か（ブロックは対象外。相手のシュートは枠内だけ）
+    function needsGkMove(s) {
+        if (!s || s.result === 'turnover' || !s.result) return false;
+        if (s.missType === 'block') return false;
+        if (s.mode === 'attack') return true;
+        return s.result === 'goal' || s.result === 'save';
+    }
+
+    // まだ入っていない項目
     function missingAfterTags(s) {
         const miss = [];
         if (!s || s.result === 'turnover' || !s.result) return miss;
-        const onTarget = (s.result === 'goal' || s.result === 'save');
-        const isSet = (s.attackType || 'set') === 'set';
-        if (s.mode === 'attack') {
-            if (s.result === 'miss' && !MISS_TYPES.includes(s.missType)) miss.push('missType');
-            if (!s.course) miss.push('course');
-            if (!GK_MOVES.includes(s.gkMove)) miss.push('gkMove');
-            if (isSet && !(START_FROM.includes(s.startFrom) && START_HOW.includes(s.startHow))) miss.push('start');
-        } else {
-            if (onTarget && !GK_MOVES.includes(s.gkMove)) miss.push('gkMove');
-            if (s.result === 'goal' && isSet && !(START_FROM.includes(s.startFrom) && START_HOW.includes(s.startHow))) miss.push('start');
-        }
+        if (s.result === 'miss' && !MISS_TYPES.includes(s.missType)) miss.push('missType');
+        if (s.missType !== 'block' && !s.course) miss.push('course');
+        if (needsGkMove(s) && !GK_MOVES.includes(s.gkMove)) miss.push('gkMove');
         return miss;
     }
 
@@ -180,6 +180,17 @@
             const rel = gkRelation(s) || 'none';
             out[rel].s++;
             if (s.result === 'goal') out[rel].g++;
+        });
+        return out;
+    }
+
+    // きっかけ（何を狙ったか）の回数。cues = [{ kind, mode, period, time, ... }]
+    function countCues(cues, mode) {
+        const out = {};
+        (cues || []).forEach(c => {
+            if (!c || !c.kind) return;
+            if (mode && c.mode !== mode) return;
+            out[c.kind] = (out[c.kind] || 0) + 1;
         });
         return out;
     }
@@ -275,8 +286,8 @@
 
     window.HA = window.HA || {};
     window.HA.stats = {
-        GK_MOVES, MISS_TYPES, START_FROM, START_HOW,
-        courseSide, gkRelation, missingAfterTags, countMissingAfterTags, aggregateGkRelation,
+        GK_MOVES, MISS_TYPES, OUT_COURSES, isOutCourse,
+        courseSide, gkRelation, needsGkMove, missingAfterTags, countMissingAfterTags, aggregateGkRelation, countCues,
         computeScore,
         computeMatchQuickStats,
         computeDashboard,

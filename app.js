@@ -2058,7 +2058,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     gk: s.gk || '',
                     to_reason: s.toReason || '',
                     x: s.x == null ? '' : Number(s.x).toFixed(2),
-                    y: s.y == null ? '' : Number(s.y).toFixed(2)
+                    y: s.y == null ? '' : Number(s.y).toFixed(2),
+                    // 飛んだ先とGK（選手に返すために、mental アプリにも渡す）
+                    miss_type: s.missType || '',
+                    gk_move: s.gkMove || '',
+                    opp_gk: s.oppGk || '',
+                    gk_lv: s.gkLv || ''
                 };
             });
             const payload = {

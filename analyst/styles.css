@@ -1835,3 +1835,11 @@ html[data-fs="large"] .gklv-chip, html[data-fs="xlarge"] .gklv-chip { font-size:
 .cue-tool.fs-tool { padding: 2px 8px; }
 
 .state-btn small { white-space: nowrap; }
+
+/* ── 上の得点の帯を1段にして、コートを広く使う ── */
+.scoreboard .timer { flex-wrap: nowrap; width: auto; flex: 1 1 auto; gap: 6px; }
+.scoreboard .team { width: auto; flex: 0 0 22%; }
+.scoreboard #time-display { font-size: 1.25rem; }
+/* 試合 / 練習: 選んでいない方は地の色のまま薄く見せる（どちらを選んでいるか迷わないように） */
+.analyst-banner .kind-toggle { background: transparent; }
+.analyst-banner .kind-btn:not(.selected) { color: rgba(58, 48, 0, 0.6); }

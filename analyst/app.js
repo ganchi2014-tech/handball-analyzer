@@ -1148,11 +1148,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const db = document.getElementById('btn-state-oppdef');
         const dt = document.getElementById('state-oppdef-text');
         if (dt) dt.textContent = OPPDEF_LABELS[state.oppDef || ''];
-        if (db) db.classList.toggle('is-set', !!state.oppDef);
+        if (db) db.classList.toggle('is-empty', !state.oppDef);
         const gb = document.getElementById('btn-state-oppgk');
         const gt = document.getElementById('state-oppgk-text');
         if (gt) gt.textContent = OPPGK_LABELS[state.oppGk || ''];
-        if (gb) gb.classList.toggle('is-set', !!state.oppGk);
+        if (gb) gb.classList.toggle('is-empty', !state.oppGk);
         // GKのLv: オフェンス中は相手GK、ディフェンス中は自GKのLvを出す
         const lv = getPresetGkLv(state.mode);
         const ll = document.getElementById('state-gklv-label');
@@ -1160,7 +1160,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const lb = document.getElementById('btn-state-gklv');
         if (ll) ll.textContent = state.mode === 'defense' ? '自GKのLv' : '相手GKのLv';
         if (lt) lt.textContent = lv ? GKLV_SHORT[lv] : '—';
-        if (lb) lb.classList.toggle('is-set', !!lv);
+        if (lb) lb.classList.toggle('is-empty', !lv);
     }
     const OPPGK_LABELS = { '': '—', '1': '1人目', '2': '2人目', '3': '3人目' };
     const GKLV_SHORT = { LV1: '✋', LV2: '✊', LV3: '✌', LV0: '✖' };

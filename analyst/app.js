@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (typeof applyKindToUI === 'function') applyKindToUI();
             state.cloudMatchId = snap.cloudMatchId || null;
             state.numbers = ['even', 'plus', 'minus', 'seven'].includes(snap.numbers) ? snap.numbers : 'even';
-            state.oppDef = ['60', '51', '321', 'other'].includes(snap.oppDef) ? snap.oppDef : '';
+            state.oppDef = ['60', '51', '321', '33', '24'].includes(snap.oppDef) ? snap.oppDef : '';
             state.oppGk = typeof snap.oppGk === 'string' ? snap.oppGk : '';
             state.cues = Array.isArray(snap.cues) ? snap.cues : [];
             if (typeof renderCueBar === 'function') renderCueBar();
@@ -1105,8 +1105,8 @@ document.addEventListener('DOMContentLoaded', () => {
         minus: '味方が退場中（こちらが1人少ない）',
         seven: '7人攻撃中（GKを下げて攻めている）'
     };
-    const OPPDEF_ORDER = ['', '60', '51', '321', 'other'];
-    const OPPDEF_LABELS = { '': '—', '60': '6:0', '51': '5:1', '321': '3:2:1', other: '他' };
+    const OPPDEF_ORDER = ['', '60', '51', '321', '33', '24'];
+    const OPPDEF_LABELS = { '': '—', '60': '6:0', '51': '5:1', '321': '3:2:1', '33': '3:3', '24': '2:4', other: '他' };
     function applyLiveTagsToUI() {
         const nb = document.getElementById('btn-state-numbers');
         const nt = document.getElementById('state-numbers-text');
@@ -1161,11 +1161,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('btn-state-oppdef').addEventListener('click', () => {
         openStatePicker('相手の守備の形', [
-            { value: '60',    label: '6:0' },
-            { value: '51',    label: '5:1' },
-            { value: '321',   label: '3:2:1' },
-            { value: 'other', label: '他', note: '上の3つ以外' },
-            { value: '',      label: '—', note: '決めない・分からない' }
+            { value: '60',  label: '6:0' },
+            { value: '51',  label: '5:1' },
+            { value: '321', label: '3:2:1' },
+            { value: '33',  label: '3:3' },
+            { value: '24',  label: '2:4' },
+            { value: '',    label: '—', note: '決めない・分からない' }
         ], state.oppDef || '', (v) => {
             state.oppDef = v;
             applyLiveTagsToUI();

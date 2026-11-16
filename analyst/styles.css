@@ -1563,3 +1563,25 @@ body {
 .info-input {
     background: rgba(241, 196, 15, 0.1);
 }
+
+/* ── 分析担当用 v2: 試合中の切替 / 後から足す項目 ── */
+.live-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    padding: 6px 10px;
+    align-items: center;
+}
+.live-tag-group { display: flex; align-items: center; gap: 6px; }
+.live-tag-label { font-size: 0.72rem; color: var(--text-muted); font-weight: 700; white-space: nowrap; }
+.live-tags .sit-chip { padding: 5px 8px; font-size: 0.72rem; flex: 0 0 auto; }
+.live-tag-input {
+    width: 64px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border-color);
+    color: #fff;
+    padding: 5px 6px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+}
+.missing-chip.aftertag { margin-top: 4px; }

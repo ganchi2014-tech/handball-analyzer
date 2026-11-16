@@ -116,6 +116,74 @@
     }
 
 
+    // ── 分析担当用 v2: 映像を見て後から足す項目 ──
+    // gkMove   : GKの最初の動き（シューター視点） L=左 / R=右 / F=前に出た / N=動かなかった / U=分からない
+    // missType : ミスの中身 out=枠外 / block=DFのブロック
+    // startFrom: 攻撃の始まり（誰から） L45 / C / R45 / LW / RW / PV
+    // startHow : 攻撃の始まり（何で）   1on1 / cross / post / middle / other
+    const GK_MOVES = ['L', 'R', 'F', 'N', 'U'];
+    const MISS_TYPES = ['out', 'block'];
+    const START_FROM = ['L45', 'C', 'R45', 'LW', 'RW', 'PV'];
+    const START_HOW = ['1on1', 'cross', 'post', 'middle', 'other'];
+
+    function courseSide(course) {
+        if (!course || course.length < 2) return null;
+        return course[1] === 'L' ? 'L' : course[1] === 'R' ? 'R' : null;
+    }
+
+    // 飛んだ先と GK の最初の動きの関係。付けるのは事実2つだけで、関係はここで機械的に出す。
+    //   opposite=GKの逆 / same=GKと同じ側 / still=GKは動かなかった / front=GKが前に出た / unknown=分からない
+    function gkRelation(s) {
+        if (!s || !GK_MOVES.includes(s.gkMove)) return null;
+        if (s.gkMove === 'U') return 'unknown';
+        if (s.gkMove === 'N') return 'still';
+        if (s.gkMove === 'F') return 'front';
+        const side = courseSide(s.course);
+        if (!side) return null;
+        return s.gkMove === side ? 'same' : 'opposite';
+    }
+
+    // 後から足す項目のうち、まだ入っていないもの（第1段階の決まり）
+    //   自チームのシュート: 全部に「飛んだ先・GKの動き」、ミスは中身、セット攻撃は始まり方
+    //   相手のシュート    : 枠内は「GKの動き」、失点（セット）は始まり方
+    function missingAfterTags(s) {
+        const miss = [];
+        if (!s || s.result === 'turnover' || !s.result) return miss;
+        const onTarget = (s.result === 'goal' || s.result === 'save');
+        const isSet = (s.attackType || 'set') === 'set';
+        if (s.mode === 'attack') {
+            if (s.result === 'miss' && !MISS_TYPES.includes(s.missType)) miss.push('missType');
+            if (!s.course) miss.push('course');
+            if (!GK_MOVES.includes(s.gkMove)) miss.push('gkMove');
+            if (isSet && !(START_FROM.includes(s.startFrom) && START_HOW.includes(s.startHow))) miss.push('start');
+        } else {
+            if (onTarget && !GK_MOVES.includes(s.gkMove)) miss.push('gkMove');
+            if (s.result === 'goal' && isSet && !(START_FROM.includes(s.startFrom) && START_HOW.includes(s.startHow))) miss.push('start');
+        }
+        return miss;
+    }
+
+    function countMissingAfterTags(shots) {
+        let n = 0;
+        (shots || []).forEach(s => { if (missingAfterTags(s).length > 0) n++; });
+        return n;
+    }
+
+    // GKとの関係ごとの「入った数 / 枠内の数」。mode='attack' は相手GK、'defense' は自GK。
+    function aggregateGkRelation(shots, mode) {
+        const keys = ['opposite', 'same', 'still', 'front', 'unknown', 'none'];
+        const out = {};
+        keys.forEach(k => { out[k] = { g: 0, s: 0 }; });
+        (shots || []).forEach(s => {
+            if (!s || s.mode !== mode) return;
+            if (s.result !== 'goal' && s.result !== 'save') return;
+            const rel = gkRelation(s) || 'none';
+            out[rel].s++;
+            if (s.result === 'goal') out[rel].g++;
+        });
+        return out;
+    }
+
     // ── 分析担当用: 状況（ノーマーク / ジャンプ / ステップ / 接触あり） ──
     // 7m とターンオーバーは状況の対象外。
     const SITUATIONS = ['free', 'jump', 'step', 'contact'];
@@ -207,6 +275,8 @@
 
     window.HA = window.HA || {};
     window.HA.stats = {
+        GK_MOVES, MISS_TYPES, START_FROM, START_HOW,
+        courseSide, gkRelation, missingAfterTags, countMissingAfterTags, aggregateGkRelation,
         computeScore,
         computeMatchQuickStats,
         computeDashboard,

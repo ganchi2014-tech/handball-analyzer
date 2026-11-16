@@ -21,7 +21,7 @@
         });
       }
     </script>
-    <link rel="stylesheet" href="styles.css?v=a2">
+    <link rel="stylesheet" href="styles.css?v=a3">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
@@ -87,6 +87,32 @@
         <div class="gk-toggle" id="gk-toggle-container">
             <span class="gk-label">GK:</span>
             <!-- buttons populated by JS from roster -->
+        </div>
+
+        <!-- 分析担当用 v2: 試合中の切替（押した状態が、以後の記録すべてに付く） -->
+        <div class="live-tags" id="live-tags">
+            <div class="live-tag-group">
+                <span class="live-tag-label">人数</span>
+                <div class="sit-chip-row" id="live-numbers-row">
+                    <button type="button" class="sit-chip selected" data-numbers="even">同数</button>
+                    <button type="button" class="sit-chip" data-numbers="plus">多い</button>
+                    <button type="button" class="sit-chip" data-numbers="minus">少ない</button>
+                    <button type="button" class="sit-chip" data-numbers="seven">7人攻撃</button>
+                </div>
+            </div>
+            <div class="live-tag-group">
+                <span class="live-tag-label">相手守備</span>
+                <div class="sit-chip-row" id="live-oppdef-row">
+                    <button type="button" class="sit-chip" data-oppdef="60">6:0</button>
+                    <button type="button" class="sit-chip" data-oppdef="51">5:1</button>
+                    <button type="button" class="sit-chip" data-oppdef="321">3:2:1</button>
+                    <button type="button" class="sit-chip" data-oppdef="other">他</button>
+                </div>
+            </div>
+            <div class="live-tag-group">
+                <span class="live-tag-label">相手GK</span>
+                <input type="text" id="live-oppgk-input" class="live-tag-input" inputmode="numeric" maxlength="3" placeholder="背番号">
+            </div>
         </div>
 
 
@@ -163,6 +189,8 @@
 
         <!-- 状況が未入力のシュート件数（タップで順に直す） -->
         <button type="button" id="situation-missing-chip" class="missing-chip hidden"></button>
+        <!-- 映像を見て後から足す項目が未入力のシュート件数（タップで順に足す） -->
+        <button type="button" id="aftertag-missing-chip" class="missing-chip aftertag hidden"></button>
 
         <!-- Toast Notification -->
         <div id="toast" class="toast"></div>
@@ -342,6 +370,14 @@
                 </div>
             </div>
 
+            <div class="edit-section" id="edit-misstype-section">
+                <div class="edit-label">ミスの中身</div>
+                <div class="sit-chip-row" id="edit-misstype-row">
+                    <button type="button" class="sit-chip" data-misstype="out">枠の外</button>
+                    <button type="button" class="sit-chip" data-misstype="block">DFのブロック</button>
+                </div>
+            </div>
+
             <div class="edit-section">
                 <div class="edit-label">攻撃種別</div>
                 <div class="attack-type-row" id="edit-attack-type-row">
@@ -352,7 +388,7 @@
             </div>
 
             <div class="edit-section" id="edit-course-section">
-                <div class="edit-label">コース</div>
+                <div class="edit-label">ボールが飛んだ先（シューター視点・枠の外も近い所で）</div>
                 <div class="goal-zone-grid" id="edit-course-grid">
                     <button type="button" class="zone-btn" data-course="TL">左上</button>
                     <button type="button" class="zone-btn" data-course="TR">右上</button>
@@ -387,6 +423,42 @@
                 </div>
             </div>
 
+            <div class="edit-section" id="edit-gkmove-section">
+                <div class="edit-label">GKの最初の動き（シューター視点・見たままを）</div>
+                <div class="sit-chip-row wrap" id="edit-gkmove-row">
+                    <button type="button" class="sit-chip" data-gkmove="L">左へ</button>
+                    <button type="button" class="sit-chip" data-gkmove="R">右へ</button>
+                    <button type="button" class="sit-chip" data-gkmove="F">前に出た</button>
+                    <button type="button" class="sit-chip" data-gkmove="N">動かなかった</button>
+                    <button type="button" class="sit-chip" data-gkmove="U">分からない</button>
+                </div>
+            </div>
+
+            <div class="edit-section" id="edit-start-section">
+                <div class="edit-label">攻撃の始まり：誰から（左右は画面の向き）</div>
+                <div class="sit-chip-row wrap" id="edit-startfrom-row">
+                    <button type="button" class="sit-chip" data-startfrom="L45">左45</button>
+                    <button type="button" class="sit-chip" data-startfrom="C">センター</button>
+                    <button type="button" class="sit-chip" data-startfrom="R45">右45</button>
+                    <button type="button" class="sit-chip" data-startfrom="LW">左サイド</button>
+                    <button type="button" class="sit-chip" data-startfrom="PV">ポスト</button>
+                    <button type="button" class="sit-chip" data-startfrom="RW">右サイド</button>
+                </div>
+                <div class="edit-label" style="margin-top:8px;">攻撃の始まり：何で</div>
+                <div class="sit-chip-row wrap" id="edit-starthow-row">
+                    <button type="button" class="sit-chip" data-starthow="1on1">1対1の突破</button>
+                    <button type="button" class="sit-chip" data-starthow="cross">クロス</button>
+                    <button type="button" class="sit-chip" data-starthow="post">ポストへのパス</button>
+                    <button type="button" class="sit-chip" data-starthow="middle">ミドル</button>
+                    <button type="button" class="sit-chip" data-starthow="other">その他</button>
+                </div>
+            </div>
+
+            <div class="edit-section" id="edit-oppno-section">
+                <div class="edit-label">相手シューターの背番号</div>
+                <input type="text" id="edit-oppno-input" class="settings-input" inputmode="numeric" maxlength="3" placeholder="例: 7">
+            </div>
+
             <div class="edit-section" id="edit-trigger-section">
                 <div class="edit-label">きっかけ（映像を見て後から・自由に書く）</div>
                 <input type="text" id="edit-trigger-input" class="settings-input" maxlength="40" placeholder="例: 右45のカットインから">
@@ -399,6 +471,7 @@
 
             <div style="display:flex; gap:8px; margin-top:14px;">
                 <button type="button" class="btn-action" id="btn-edit-save" style="flex:1; background:var(--success); border:none; color:#fff; padding:14px; border-radius:8px; font-weight:bold;">💾 保存</button>
+                <button type="button" class="btn-action" id="btn-edit-save-next" style="flex:1; background:var(--primary); border:none; color:#fff; padding:14px; border-radius:8px; font-weight:bold;">保存して次へ ▶</button>
                 <button type="button" id="btn-edit-delete" style="background:rgba(231,76,60,0.2); border:1px solid #e74c3c; color:#e74c3c; padding:14px 18px; border-radius:8px; font-weight:bold;">🗑 削除</button>
             </div>
             <button class="btn-cancel" onclick="closeEditShotModal()">キャンセル</button>
@@ -580,9 +653,9 @@
         </div>
     </div>
 
-    <script src="lib/roster.js?v=a2"></script>
-    <script src="lib/stats.js?v=a2"></script>
-    <script src="lib/csv.js?v=a2"></script>
-    <script src="app.js?v=a2"></script>
+    <script src="lib/roster.js?v=a3"></script>
+    <script src="lib/stats.js?v=a3"></script>
+    <script src="lib/csv.js?v=a3"></script>
+    <script src="app.js?v=a3"></script>
 </body>
 </html>

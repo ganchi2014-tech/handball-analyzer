@@ -40,7 +40,11 @@ document.addEventListener('DOMContentLoaded', () => {
         lineup: [],            // 出場中の選手名（最大6名、GKを除く）
         period: 1,             // 1=前半, 2=後半
         inputMode: 'swipe',    // 'swipe' or 'modal'
-        viewMatch: null        // 履歴詳細を表示中なら match オブジェクト、現在試合なら null
+        viewMatch: null,       // 履歴詳細を表示中なら match オブジェクト、現在試合なら null
+        // 分析担当用 v2: 試合中の切替（押した状態が以後の記録に付く）
+        numbers: 'even',       // even=同数 / plus=多い / minus=少ない / seven=7人攻撃
+        oppDef: '',            // 相手の守備の形 60 / 51 / 321 / other（未選択は空）
+        oppGk: ''              // 相手GKの背番号
     };
 
     const LINEUP_MAX = 6;
@@ -134,6 +138,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 matchDate: ui.dateInput.value,
                 matchOpponent: ui.opponentInput.value,
                 cloudMatchId: state.cloudMatchId || null,
+                numbers: state.numbers,
+                oppDef: state.oppDef,
+                oppGk: state.oppGk,
                 savedAt: Date.now()
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
@@ -165,6 +172,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (snap.matchDate) ui.dateInput.value = snap.matchDate;
             if (snap.matchOpponent) ui.opponentInput.value = snap.matchOpponent;
             state.cloudMatchId = snap.cloudMatchId || null;
+            state.numbers = ['even', 'plus', 'minus', 'seven'].includes(snap.numbers) ? snap.numbers : 'even';
+            state.oppDef = ['60', '51', '321', 'other'].includes(snap.oppDef) ? snap.oppDef : '';
+            state.oppGk = typeof snap.oppGk === 'string' ? snap.oppGk : '';
+            if (typeof applyLiveTagsToUI === 'function') applyLiveTagsToUI();
 
             // Mode radio + classes
             if (state.mode === 'defense') {
@@ -502,6 +513,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.stepToReason.classList.add('hidden');
         if (state.mode === 'defense') {
             // 相手のTO: 選手選択不要、即記録
+            stampLiveTags(state.currentDraftShot);
             state.shots.push(state.currentDraftShot);
             state.currentDraftShot = null;
             ui.modal.classList.add('hidden');
@@ -908,6 +920,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const added = state.currentDraftShot;
         if (added.attackType === '7m') added.situation = null;
+        stampLiveTags(added);
         state.shots.push(added);
 
         if (added.result === 'goal') {
@@ -981,6 +994,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.statShotAccuracy.textContent = `${d.shotAccuracy}%`;
         ui.statGkSave.textContent = `${d.saveRate}%`;
         updateMissingChip();
+        if (typeof updateAfterTagChip === 'function') updateAfterTagChip();
     }
 
     // ── 分析担当用: 状況が未入力のシュート件数 ──
@@ -998,6 +1012,80 @@ document.addEventListener('DOMContentLoaded', () => {
             if (target) openEditShotModal(target.id);
         });
     }
+
+    // ── 分析担当用 v2: 映像を見て後から足す項目が未入力の件数 ──
+    const afterTagChip = document.getElementById('aftertag-missing-chip');
+    function updateAfterTagChip() {
+        if (!afterTagChip) return;
+        const n = HA.stats.countMissingAfterTags(state.shots);
+        afterTagChip.classList.toggle('hidden', n === 0);
+        afterTagChip.textContent = n > 0 ? `🎬 映像を見て足す 未入力 ${n}件　▶ 順に足す` : '';
+    }
+    function nextMissingAfterTag(afterId) {
+        // 記録した順に、まだ足りていない次の1本を返す（afterId の後ろを優先、無ければ先頭から）
+        const list = state.shots.filter(s => HA.stats.missingAfterTags(s).length > 0);
+        if (list.length === 0) return null;
+        if (afterId != null) {
+            const idx = state.shots.findIndex(s => s.id === afterId);
+            const later = list.find(s => state.shots.indexOf(s) > idx);
+            if (later) return later;
+        }
+        return list[0];
+    }
+    if (afterTagChip) {
+        afterTagChip.addEventListener('click', () => {
+            const target = nextMissingAfterTag(null);
+            if (target) openEditShotModal(target.id);
+        });
+    }
+
+    // ── 分析担当用 v2: 試合中の切替 ──
+    function stampLiveTags(shot) {
+        if (!shot) return;
+        shot.numbers = state.numbers || 'even';
+        shot.oppDef = state.oppDef || null;
+        shot.oppGk = (state.oppGk || '').trim() || null;
+    }
+    function resetLiveTags() {
+        state.numbers = 'even';
+        state.oppDef = '';
+        state.oppGk = '';
+        applyLiveTagsToUI();
+    }
+    function applyLiveTagsToUI() {
+        document.querySelectorAll('#live-numbers-row .sit-chip').forEach(c => {
+            c.classList.toggle('selected', c.getAttribute('data-numbers') === state.numbers);
+        });
+        document.querySelectorAll('#live-oppdef-row .sit-chip').forEach(c => {
+            c.classList.toggle('selected', c.getAttribute('data-oppdef') === state.oppDef);
+        });
+        const inp = document.getElementById('live-oppgk-input');
+        if (inp) inp.value = state.oppGk || '';
+    }
+    document.querySelectorAll('#live-numbers-row .sit-chip').forEach(c => {
+        c.addEventListener('click', () => {
+            state.numbers = c.getAttribute('data-numbers');
+            applyLiveTagsToUI();
+            saveState();
+        });
+    });
+    document.querySelectorAll('#live-oppdef-row .sit-chip').forEach(c => {
+        c.addEventListener('click', () => {
+            // もう一度押すと未選択に戻る
+            const v = c.getAttribute('data-oppdef');
+            state.oppDef = (state.oppDef === v) ? '' : v;
+            applyLiveTagsToUI();
+            saveState();
+        });
+    });
+    const liveOppGkInput = document.getElementById('live-oppgk-input');
+    if (liveOppGkInput) {
+        liveOppGkInput.addEventListener('input', () => {
+            state.oppGk = liveOppGkInput.value.trim();
+            saveState();
+        });
+    }
+    applyLiveTagsToUI();
 
     // 相手を「練習」にするボタン
     const btnPractice = document.getElementById('btn-practice');
@@ -1601,6 +1689,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ui.btnReset.addEventListener('click', () => {
         if (ui.btnReset.classList.contains('confirm-mode')) {
             state.shots = [];
+            resetLiveTags();
             state.score = {us:0, opponent:0};
             clearInterval(state.timer.interval);
             state.timer = { running: false, seconds: 0, interval: null };
@@ -1767,8 +1856,23 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('#edit-course-grid .zone-btn').forEach(b => {
             b.classList.toggle('selected', b.getAttribute('data-course') === shot.course);
         });
-        const showCourse = (shot.result === 'goal' || shot.result === 'save');
+        // v2: 飛んだ先はミスでも付ける（枠の外も近い所で）
+        const showCourse = (shot.result === 'goal' || shot.result === 'save' || shot.result === 'miss');
         document.getElementById('edit-course-section').classList.toggle('hidden', !showCourse);
+        refreshEditV2Sections(shot, shot.result, shot.attackType || 'set');
+        document.querySelectorAll('#edit-misstype-row .sit-chip').forEach(c => {
+            c.classList.toggle('selected', c.getAttribute('data-misstype') === shot.missType);
+        });
+        document.querySelectorAll('#edit-gkmove-row .sit-chip').forEach(c => {
+            c.classList.toggle('selected', c.getAttribute('data-gkmove') === shot.gkMove);
+        });
+        document.querySelectorAll('#edit-startfrom-row .sit-chip').forEach(c => {
+            c.classList.toggle('selected', c.getAttribute('data-startfrom') === shot.startFrom);
+        });
+        document.querySelectorAll('#edit-starthow-row .sit-chip').forEach(c => {
+            c.classList.toggle('selected', c.getAttribute('data-starthow') === shot.startHow);
+        });
+        document.getElementById('edit-oppno-input').value = shot.oppNo || '';
         // 分析担当用: 状況 / アシスト / きっかけ
         document.getElementById('edit-situation-section').classList.toggle('hidden', !HA.stats.needsSituation(shot));
         document.querySelectorAll('#edit-situation-row .sit-chip').forEach(c => {
@@ -1791,6 +1895,16 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('edit-shot-modal').classList.remove('hidden');
     }
 
+    // v2: 結果・攻撃種別に応じて、後から足す項目の出し入れを決める
+    function refreshEditV2Sections(shot, result, atk) {
+        const isShot = (result === 'goal' || result === 'save' || result === 'miss');
+        const isSet = (atk || 'set') === 'set';
+        document.getElementById('edit-misstype-section').classList.toggle('hidden', result !== 'miss');
+        document.getElementById('edit-gkmove-section').classList.toggle('hidden', !isShot);
+        document.getElementById('edit-start-section').classList.toggle('hidden', !(isShot && isSet));
+        document.getElementById('edit-oppno-section').classList.toggle('hidden', !(shot && shot.mode === 'defense' && isShot));
+    }
+
     function updateEditPlayerDisplay(player) {
         document.getElementById('edit-player-btn').textContent = player || '選手を選択';
     }
@@ -1809,7 +1923,10 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('#edit-result-row .edit-result-btn').forEach(b => b.classList.remove('selected'));
             btn.classList.add('selected');
             const r = btn.getAttribute('data-result');
-            document.getElementById('edit-course-section').classList.toggle('hidden', r !== 'goal' && r !== 'save');
+            document.getElementById('edit-course-section').classList.toggle('hidden', r !== 'goal' && r !== 'save' && r !== 'miss');
+            const shot = state.shots.find(s => s.id === editingShotId);
+            const atk = document.querySelector('#edit-attack-type-row .atk-chip.selected')?.getAttribute('data-atk') || 'set';
+            refreshEditV2Sections(shot, r, atk);
         });
     });
 
@@ -1818,11 +1935,14 @@ document.addEventListener('DOMContentLoaded', () => {
         chip.addEventListener('click', () => {
             document.querySelectorAll('#edit-attack-type-row .atk-chip').forEach(c => c.classList.remove('selected'));
             chip.classList.add('selected');
+            const shot = state.shots.find(s => s.id === editingShotId);
+            const r = document.querySelector('#edit-result-row .edit-result-btn.selected')?.getAttribute('data-result') || (shot && shot.result);
+            refreshEditV2Sections(shot, r, chip.getAttribute('data-atk'));
         });
     });
 
     // 分析担当用: 状況 / アシスト のチップ（もう一度押すと選択を外す）
-    ['#edit-situation-row', '#edit-assist-row'].forEach(sel => {
+    ['#edit-situation-row', '#edit-assist-row', '#edit-misstype-row', '#edit-gkmove-row', '#edit-startfrom-row', '#edit-starthow-row'].forEach(sel => {
         document.querySelectorAll(sel + ' .sit-chip').forEach(chip => {
             chip.addEventListener('click', () => {
                 const was = chip.classList.contains('selected');
@@ -1877,17 +1997,33 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('edit-player-btn').after(picker);
     });
 
-    // Save
-    document.getElementById('btn-edit-save').addEventListener('click', () => {
+    // Save（goNext=true のときは、保存したあと未入力の次の1本を開く）
+    function saveEditedShot(goNext) {
         if (editingShotId == null) return;
         const shot = state.shots.find(s => s.id === editingShotId);
         if (!shot) return;
+        const savedId = shot.id;
         const newResult = document.querySelector('#edit-result-row .edit-result-btn.selected')?.getAttribute('data-result') || shot.result;
         const newAtk = document.querySelector('#edit-attack-type-row .atk-chip.selected')?.getAttribute('data-atk') || 'set';
         const newCourse = document.querySelector('#edit-course-grid .zone-btn.selected')?.getAttribute('data-course') || null;
         shot.result = newResult;
         shot.attackType = newAtk;
-        shot.course = (newResult === 'goal' || newResult === 'save') ? newCourse : null;
+        // v2: 飛んだ先はミスでも残す
+        shot.course = (newResult === 'goal' || newResult === 'save' || newResult === 'miss') ? newCourse : null;
+        const pick = (sel, attr) => document.querySelector(sel + ' .sit-chip.selected')?.getAttribute(attr) || null;
+        const isShotNow = (newResult === 'goal' || newResult === 'save' || newResult === 'miss');
+        shot.missType = (newResult === 'miss') ? pick('#edit-misstype-row', 'data-misstype') : null;
+        shot.gkMove = isShotNow ? pick('#edit-gkmove-row', 'data-gkmove') : null;
+        if (isShotNow && newAtk === 'set') {
+            shot.startFrom = pick('#edit-startfrom-row', 'data-startfrom');
+            shot.startHow = pick('#edit-starthow-row', 'data-starthow');
+        } else {
+            shot.startFrom = null;
+            shot.startHow = null;
+        }
+        shot.oppNo = (shot.mode === 'defense' && isShotNow)
+            ? (document.getElementById('edit-oppno-input').value.trim() || null)
+            : null;
         // 分析担当用: 状況 / アシスト / きっかけ
         shot.situation = HA.stats.needsSituation(shot)
             ? (document.querySelector('#edit-situation-row .sit-chip.selected')?.getAttribute('data-situation') || null)
@@ -1908,7 +2044,14 @@ document.addEventListener('DOMContentLoaded', () => {
         saveState();
         showToast('✅ 編集を保存');
         window.closeEditShotModal();
-    });
+        if (goNext) {
+            const nxt = nextMissingAfterTag(savedId);
+            if (nxt && nxt.id !== savedId) openEditShotModal(nxt.id);
+            else if (!nxt) showToast('✅ 足す項目はすべて入りました');
+        }
+    }
+    document.getElementById('btn-edit-save').addEventListener('click', () => saveEditedShot(false));
+    document.getElementById('btn-edit-save-next').addEventListener('click', () => saveEditedShot(true));
 
     // Delete
     document.getElementById('btn-edit-delete').addEventListener('click', () => {
@@ -2189,6 +2332,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function clearCurrentMatch() {
         state.shots = [];
+        resetLiveTags();
         state.cloudMatchId = null; // 新規試合はクラウドIDも新規割当
         state.score = { us: 0, opponent: 0 };
         clearInterval(state.timer.interval);

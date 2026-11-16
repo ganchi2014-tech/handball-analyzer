@@ -6,7 +6,10 @@
     const HEADERS = ['date', 'opponent', 'period', 'time_s', 'mode', 'result',
                      'attack_type', 'course', 'player', 'rosterId', 'gk', 'to_reason', 'x', 'y',
                      // 分析担当用の追加列（状況 / 失点のアシスト / きっかけメモ）
-                     'situation', 'assist', 'trigger'];
+                     'situation', 'assist', 'trigger',
+                     // v2: 映像を見て後から足す項目 / 試合中の切替 / 試合をまたぐ鍵
+                     'miss_type', 'gk_move', 'start_from', 'start_how', 'opp_no',
+                     'opp_gk', 'numbers', 'opp_def', 'match_id'];
 
     function escape(v) {
         const s = v == null ? '' : String(v);
@@ -37,7 +40,16 @@
             shot.y == null ? '' : Number(shot.y).toFixed(2),
             shot.situation || '',
             shot.assist || '',
-            shot.trigger || ''
+            shot.trigger || '',
+            shot.missType || '',
+            shot.gkMove || '',
+            shot.startFrom || '',
+            shot.startHow || '',
+            shot.oppNo || '',
+            shot.oppGk || '',
+            shot.numbers || '',
+            shot.oppDef || '',
+            ((match && match.date) || '') + '_' + ((match && match.opponent) || '')
         ];
     }
 

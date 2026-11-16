@@ -1446,3 +1446,7 @@ body {
 /* ── 得点の帯を1段にして、コートを広く使う（縦が短いスマホ向け） ── */
 .scoreboard .timer { flex-wrap: nowrap; width: auto; flex: 1 1 auto; gap: 6px; }
 .scoreboard .team { width: auto; flex: 0 0 22%; }
+
+/* まだ入れていない状態のボタンは色を付けて、入れ忘れに気づけるようにする */
+.state-btn.is-empty { background: rgba(230, 126, 34, 0.30); border: 2px dashed #f39c12; }
+.state-btn.is-empty b { color: #ffd08a; }

@@ -1609,7 +1609,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const gb = document.getElementById('btn-state-oppgk');
         const gt = document.getElementById('state-oppgk-text');
         if (gt) gt.textContent = OPPGK_LABELS[state.oppGk || ''];
-        if (gb) gb.classList.toggle('is-set', !!state.oppGk);
+        if (gb) gb.classList.toggle('is-empty', !state.oppGk);
         // オフェンス中は相手GK、ディフェンス中は自GKのLvを出す
         const lv = getPresetGkLv(state.mode);
         const ll = document.getElementById('state-gklv-label');
@@ -1617,7 +1617,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const lb = document.getElementById('btn-state-gklv');
         if (ll) ll.textContent = state.mode === 'defense' ? '自GKのLv' : '相手GKのLv';
         if (lt) lt.textContent = lv ? GKLV_SHORT[lv] : '—';
-        if (lb) lb.classList.toggle('is-set', !!lv);
+        if (lb) lb.classList.toggle('is-empty', !lv);
     }
     function resetGkState() {
         state.oppGk = '';

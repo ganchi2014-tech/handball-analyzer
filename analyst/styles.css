@@ -1843,3 +1843,7 @@ html[data-fs="large"] .gklv-chip, html[data-fs="xlarge"] .gklv-chip { font-size:
 /* 試合 / 練習: 選んでいない方は地の色のまま薄く見せる（どちらを選んでいるか迷わないように） */
 .analyst-banner .kind-toggle { background: transparent; }
 .analyst-banner .kind-btn:not(.selected) { color: rgba(58, 48, 0, 0.6); }
+
+/* まだ入れていない状態のボタンは色を付けて、入れ忘れに気づけるようにする */
+.state-btn.is-empty { background: rgba(230, 126, 34, 0.30); border: 2px dashed #f39c12; }
+.state-btn.is-empty b { color: #ffd08a; }

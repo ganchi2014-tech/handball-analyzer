@@ -1333,3 +1333,112 @@ body {
     0%, 100% { transform: scale(1); opacity: 1; }
     50%      { transform: scale(1.18); opacity: 0.7; }
 }
+
+/* ══ 飛んだ先（枠外・ブロック）/ GKの動き / 相手GK・GKのLv ══ */
+.sit-chip-row { display: flex; gap: 6px; }
+.sit-chip-row.wrap { flex-wrap: wrap; }
+.sit-chip {
+    flex: 1;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border-color);
+    color: #fff;
+    padding: 8px 6px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: inherit;
+}
+.sit-chip-row.wrap .sit-chip { flex: 1 0 28%; }
+.sit-chip.selected { background: rgba(52, 152, 219, 0.35); border-color: var(--primary); box-shadow: 0 0 6px rgba(52, 152, 219, 0.4); }
+.course-wrap { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+.course-out-top { display: flex; gap: 4px; }
+.course-out-top .out-btn { flex: 1; min-height: 40px; }
+.course-mid { display: flex; gap: 4px; align-items: stretch; }
+.course-mid .goal-zone-grid { flex: 1; }
+.course-mid .out-btn.side { flex: 0 0 52px; }
+.out-btn {
+    background: rgba(231, 76, 60, 0.12);
+    border: 1px dashed rgba(231, 76, 60, 0.7);
+    color: #f5b7b1;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 6px 4px;
+    min-height: 0;
+}
+.out-btn.selected { background: rgba(231, 76, 60, 0.45); color: #fff; border-style: solid; }
+#edit-course-out .out-btn { flex: 1; }
+.block-btn {
+    min-height: 44px;
+    background: rgba(155, 89, 182, 0.2);
+    border: 1px solid #9b59b6;
+    color: #e8daef;
+    border-radius: 6px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+}
+.course-wrap[data-result="miss"] .goal-zone-grid .zone-btn,
+.course-wrap[data-result="goal"] .out-btn,
+.course-wrap[data-result="save"] .out-btn,
+.course-wrap[data-result="goal"] .block-btn,
+.course-wrap[data-result="save"] .block-btn { opacity: 0.25; pointer-events: none; }
+.gkmove-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%; }
+.gkmove-btn {
+    min-height: 56px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border-color);
+    color: #fff;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+}
+.gklv-shot { margin-bottom: 4px; }
+.gklv-chip { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 6px 2px; font-size: 0.72rem; }
+.gklv-chip small { font-size: 0.72rem; font-weight: 800; color: #f1c40f; }
+.gklv-chip.selected { background: rgba(241, 196, 15, 0.3); border-color: #f1c40f; box-shadow: none; }
+.live-tags { display: flex; flex-wrap: nowrap; gap: 6px; padding: 0; align-items: stretch; flex-shrink: 0; }
+.state-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 4px 6px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    font-family: inherit;
+}
+.state-btn small { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
+.state-btn b { font-size: 0.95rem; font-weight: 800; white-space: nowrap; }
+.state-btn.is-set { background: rgba(241, 196, 15, 0.25); border-color: #f1c40f; }
+.state-picker-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.state-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 68px;
+    padding: 8px 6px;
+    background: rgba(255,255,255,0.1);
+    border: 2px solid rgba(255,255,255,0.45);
+    border-radius: 12px;
+    color: #fff;
+    font-family: inherit;
+    cursor: pointer;
+}
+.state-option b { font-size: 1.15rem; font-weight: 800; }
+.state-option small { font-size: 0.78rem; font-weight: 600; color: rgba(255,255,255,0.9); }
+.state-option.selected { background: rgba(241, 196, 15, 0.3); border-color: #f1c40f; }

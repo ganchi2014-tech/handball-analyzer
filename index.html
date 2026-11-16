@@ -20,7 +20,7 @@
         });
       }
     </script>
-    <link rel="stylesheet" href="styles.css?v=23">
+    <link rel="stylesheet" href="styles.css?v=24">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
@@ -83,6 +83,12 @@
         <div class="gk-toggle" id="gk-toggle-container">
             <span class="gk-label">GK:</span>
             <!-- buttons populated by JS from roster -->
+        </div>
+
+        <!-- 相手GK（何人目か）と、GKのLv（先に決めておく。オフェンス中は相手GK、ディフェンス中は自GK） -->
+        <div class="live-tags" id="live-tags">
+            <button type="button" class="state-btn" id="btn-state-oppgk"><small>相手GK</small><b id="state-oppgk-text">—</b></button>
+            <button type="button" class="state-btn" id="btn-state-gklv"><small id="state-gklv-label">相手GKのLv</small><b id="state-gklv-text">—</b></button>
         </div>
 
 
@@ -159,9 +165,19 @@
 
         <!-- Toast Notification -->
         <div id="toast" class="toast"></div>
+        </div>
     </div>
 
     <!-- Action Action Sheet Modal -->
+    <!-- 状態を選ぶ画面（相手GK / GKのLv のボタンを押すと出る） -->
+    <div id="state-picker" class="modal-overlay hidden" style="z-index:190;">
+        <div class="modal-content">
+            <div class="modal-drag-handle"></div>
+            <h3 id="state-picker-title">選んでください</h3>
+            <div id="state-picker-options" class="state-picker-options"></div>
+            <button type="button" class="btn-cancel" id="state-picker-cancel">変えずに閉じる</button>
+        </div>
+
     <div id="action-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-drag-handle"></div>
@@ -197,17 +213,52 @@
 
             <!-- Step 1.5: Shot Course (only for goal/save) -->
             <div id="step-course" class="step hidden">
-                <h3>シュートコース</h3>
-                <div class="goal-zone-grid">
-                    <button type="button" class="zone-btn" data-course="TL">左上</button>
-                    <button type="button" class="zone-btn" data-course="TR">右上</button>
-                    <button type="button" class="zone-btn" data-course="ML">左中</button>
-                    <button type="button" class="zone-btn" data-course="MR">右中</button>
-                    <button type="button" class="zone-btn" data-course="BL">左下</button>
-                    <button type="button" class="zone-btn" data-course="BR">右下</button>
+                <h3>ボールが飛んだ先</h3>
+                <div class="course-wrap" id="course-wrap">
+                    <div class="course-out-top">
+                        <button type="button" class="zone-btn out-btn" data-course="OTL">枠外 左上</button>
+                        <button type="button" class="zone-btn out-btn" data-course="OTR">枠外 右上</button>
+                    </div>
+                    <div class="course-mid">
+                        <button type="button" class="zone-btn out-btn side" data-course="OL">枠外<br>左</button>
+                        <div class="goal-zone-grid">
+                            <button type="button" class="zone-btn" data-course="TL">左上</button>
+                            <button type="button" class="zone-btn" data-course="TR">右上</button>
+                            <button type="button" class="zone-btn" data-course="ML">左中</button>
+                            <button type="button" class="zone-btn" data-course="MR">右中</button>
+                            <button type="button" class="zone-btn" data-course="BL">左下</button>
+                            <button type="button" class="zone-btn" data-course="BR">右下</button>
+                        </div>
+                        <button type="button" class="zone-btn out-btn side" data-course="OR">枠外<br>右</button>
+                    </div>
+                    <button type="button" class="block-btn" id="btn-course-block">🧱 DFのブロック</button>
                 </div>
-                <p class="step-hint">シューター視点</p>
+                <p class="step-hint">シューター視点。ミスは枠の外かブロックを選ぶ</p>
                 <button type="button" class="btn-skip" id="btn-skip-course">⏭ コース不明（スキップ）</button>
+                <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+            </div>
+
+            <!-- Step 1.7: GKの動き（コースの次） -->
+            <div id="step-gkmove" class="step hidden">
+                <h3 id="gkmove-step-title">GKの動き</h3>
+                <div class="gklv-shot">
+                    <div class="edit-label" id="gklv-shot-label">GKのLv（このシュートだけ違うなら押して変える）</div>
+                    <div class="sit-chip-row" id="gklv-shot-row">
+                        <button type="button" class="sit-chip gklv-chip" data-gklv="LV1"><small>Lv1</small>中間位置</button>
+                        <button type="button" class="sit-chip gklv-chip" data-gklv="LV2"><small>Lv2</small>せーのドン</button>
+                        <button type="button" class="sit-chip gklv-chip" data-gklv="LV3"><small>Lv3</small>駆け引き</button>
+                        <button type="button" class="sit-chip gklv-chip" data-gklv="LV0"><small>Lv0</small>動かず</button>
+                    </div>
+                </div>
+                <div class="edit-label" style="margin-top:10px;">GKが最初に動いた方向（押すと次へ進む）</div>
+                <div class="gkmove-grid">
+                    <button type="button" class="gkmove-btn" data-gkmove="L">← 左へ</button>
+                    <button type="button" class="gkmove-btn" data-gkmove="R">右へ →</button>
+                    <button type="button" class="gkmove-btn" data-gkmove="F">前に出た</button>
+                    <button type="button" class="gkmove-btn" data-gkmove="N">動かなかった</button>
+                </div>
+                <p class="step-hint">シューター視点。見たままを</p>
+                <button type="button" class="btn-skip" id="btn-gkmove-unknown">分からない</button>
                 <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
             </div>
 
@@ -302,6 +353,14 @@
                 </div>
             </div>
 
+            <div class="edit-section" id="edit-misstype-section">
+                <div class="edit-label">ミスの中身</div>
+                <div class="sit-chip-row" id="edit-misstype-row">
+                    <button type="button" class="sit-chip" data-misstype="out">枠の外</button>
+                    <button type="button" class="sit-chip" data-misstype="block">DFのブロック</button>
+                </div>
+            </div>
+
             <div class="edit-section">
                 <div class="edit-label">攻撃種別</div>
                 <div class="attack-type-row" id="edit-attack-type-row">
@@ -312,7 +371,7 @@
             </div>
 
             <div class="edit-section" id="edit-course-section">
-                <div class="edit-label">コース</div>
+                <div class="edit-label">ボールが飛んだ先（シューター視点）</div>
                 <div class="goal-zone-grid" id="edit-course-grid">
                     <button type="button" class="zone-btn" data-course="TL">左上</button>
                     <button type="button" class="zone-btn" data-course="TR">右上</button>
@@ -321,7 +380,31 @@
                     <button type="button" class="zone-btn" data-course="BL">左下</button>
                     <button type="button" class="zone-btn" data-course="BR">右下</button>
                 </div>
+                <div class="sit-chip-row" id="edit-course-out" style="margin-top:6px;">
+                    <button type="button" class="zone-btn out-btn" data-course="OL">枠外 左</button>
+                    <button type="button" class="zone-btn out-btn" data-course="OTL">枠外 左上</button>
+                    <button type="button" class="zone-btn out-btn" data-course="OTR">枠外 右上</button>
+                    <button type="button" class="zone-btn out-btn" data-course="OR">枠外 右</button>
+                </div>
                 <button type="button" id="edit-course-clear" class="btn-secondary" style="margin-top:6px;">コースをクリア</button>
+            </div>
+
+            <div class="edit-section" id="edit-gkmove-section">
+                <div class="edit-label">GKのLv</div>
+                <div class="sit-chip-row wrap" id="edit-gklv-row">
+                    <button type="button" class="sit-chip" data-gklv="LV1">Lv1 中間位置</button>
+                    <button type="button" class="sit-chip" data-gklv="LV2">Lv2 せーのドン</button>
+                    <button type="button" class="sit-chip" data-gklv="LV3">Lv3 駆け引き</button>
+                    <button type="button" class="sit-chip" data-gklv="LV0">Lv0 動かなかった</button>
+                </div>
+                <div class="edit-label" style="margin-top:8px;">GKが最初に動いた方向（シューター視点）</div>
+                <div class="sit-chip-row wrap" id="edit-gkmove-row">
+                    <button type="button" class="sit-chip" data-gkmove="L">左へ</button>
+                    <button type="button" class="sit-chip" data-gkmove="R">右へ</button>
+                    <button type="button" class="sit-chip" data-gkmove="F">前に出た</button>
+                    <button type="button" class="sit-chip" data-gkmove="N">動かなかった</button>
+                    <button type="button" class="sit-chip" data-gkmove="U">分からない</button>
+                </div>
             </div>
 
             <div class="edit-section" id="edit-player-section">
@@ -489,8 +572,8 @@
     </div>
 
     <script src="lib/roster.js?v=16"></script>
-    <script src="lib/stats.js?v=15"></script>
-    <script src="lib/csv.js?v=16"></script>
-    <script src="app.js?v=30"></script>
+    <script src="lib/stats.js?v=16"></script>
+    <script src="lib/csv.js?v=17"></script>
+    <script src="app.js?v=31"></script>
 </body>
 </html>

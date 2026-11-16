@@ -44,7 +44,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // 分析担当用 v2: 試合中の切替（押した状態が以後の記録に付く）
         numbers: 'even',       // even=同数 / plus=多い / minus=少ない / seven=7人攻撃
         oppDef: '',            // 相手の守備の形 60 / 51 / 321 / other（未選択は空）
-        oppGk: '',             // 相手GKの背番号
+        oppGk: '',             // 相手GK（'1'=1人目 / '2'=2人目 / '3'=3人目 / ''=決めない）
+        gkLvPreset: { opp: {}, own: {} },  // 先に決めておくGKのLv。相手GKは人ごと、自GKは名前ごとに覚える
         cues: []               // きっかけ（何を狙ったか）を押した記録 [{id, kind, mode, period, time, ...}]
     };
 
@@ -142,6 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 numbers: state.numbers,
                 oppDef: state.oppDef,
                 oppGk: state.oppGk,
+                gkLvPreset: state.gkLvPreset,
                 cues: state.cues,
                 savedAt: Date.now()
             };
@@ -177,7 +179,10 @@ document.addEventListener('DOMContentLoaded', () => {
             state.cloudMatchId = snap.cloudMatchId || null;
             state.numbers = ['even', 'plus', 'minus', 'seven'].includes(snap.numbers) ? snap.numbers : 'even';
             state.oppDef = ['60', '51', '321', '33', '24'].includes(snap.oppDef) ? snap.oppDef : '';
-            state.oppGk = typeof snap.oppGk === 'string' ? snap.oppGk : '';
+            state.oppGk = ['1', '2', '3'].includes(snap.oppGk) ? snap.oppGk : '';
+            state.gkLvPreset = (snap.gkLvPreset && typeof snap.gkLvPreset === 'object')
+                ? { opp: snap.gkLvPreset.opp || {}, own: snap.gkLvPreset.own || {} }
+                : { opp: {}, own: {} };
             state.cues = Array.isArray(snap.cues) ? snap.cues : [];
             if (typeof renderCueBar === 'function') renderCueBar();
             if (typeof applyLiveTagsToUI === 'function') applyLiveTagsToUI();
@@ -249,6 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 gkContainer.querySelectorAll('.gk-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 saveState();
+                if (typeof applyLiveTagsToUI === 'function') applyLiveTagsToUI();
             });
             gkContainer.appendChild(btn);
         });
@@ -882,6 +888,13 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.stepCourse.classList.add('hidden');
         // v2: 次はGKの最初の動き（ブロックと、相手の枠外は聞かない）
         if (HA.stats.needsGkMove(state.currentDraftShot)) {
+            // 先に決めておいたLvを出す。このシュートだけ違うなら、押して変える（決めておいた方は変えない）
+            const d = state.currentDraftShot;
+            d.gkLv = getPresetGkLv(d.mode) || null;
+            renderShotGkLv();
+            const who = d.mode === 'defense' ? '自GK' : '相手GK';
+            document.getElementById('gkmove-step-title').textContent = who + 'の動き';
+            document.getElementById('gklv-shot-label').textContent = who + 'のLv（このシュートだけ違うなら押して変える）';
             stepGkMove.classList.remove('hidden');
         } else {
             proceedAfterGkMove();
@@ -917,6 +930,21 @@ document.addEventListener('DOMContentLoaded', () => {
             proceedAfterCourse();
         });
     }
+    function renderShotGkLv() {
+        const d = state.currentDraftShot;
+        document.querySelectorAll('#gklv-shot-row .gklv-chip').forEach(c => {
+            c.classList.toggle('selected', !!d && c.getAttribute('data-gklv') === d.gkLv);
+        });
+    }
+    document.querySelectorAll('#gklv-shot-row .gklv-chip').forEach(c => {
+        c.addEventListener('click', () => {
+            if (!state.currentDraftShot) return;
+            const v = c.getAttribute('data-gklv');
+            // もう一度押すと外れる
+            state.currentDraftShot.gkLv = (state.currentDraftShot.gkLv === v) ? null : v;
+            renderShotGkLv();
+        });
+    });
     document.querySelectorAll('#step-gkmove .gkmove-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             if (!state.currentDraftShot) return;
@@ -1087,11 +1115,16 @@ document.addEventListener('DOMContentLoaded', () => {
         shot.numbers = state.numbers || 'even';
         shot.oppDef = state.oppDef || null;
         shot.oppGk = (state.oppGk || '').trim() || null;
+        // GKのLv: シュートの画面で変えていなければ、先に決めておいたLvを付ける（きっかけ・ターンオーバーには付けない）
+        if (shot.result && shot.result !== 'turnover' && shot.result !== 'cue' && shot.kind === undefined && shot.gkLv === undefined) {
+            shot.gkLv = getPresetGkLv(shot.mode) || null;
+        }
     }
     function resetLiveTags() {
         state.numbers = 'even';
         state.oppDef = '';
         state.oppGk = '';
+        state.gkLvPreset = { opp: {}, own: {} };
         state.cues = [];
         applyLiveTagsToUI();
         renderCueBar();
@@ -1116,8 +1149,34 @@ document.addEventListener('DOMContentLoaded', () => {
         const dt = document.getElementById('state-oppdef-text');
         if (dt) dt.textContent = OPPDEF_LABELS[state.oppDef || ''];
         if (db) db.classList.toggle('is-set', !!state.oppDef);
-        const inp = document.getElementById('live-oppgk-input');
-        if (inp && inp.value !== (state.oppGk || '')) inp.value = state.oppGk || '';
+        const gb = document.getElementById('btn-state-oppgk');
+        const gt = document.getElementById('state-oppgk-text');
+        if (gt) gt.textContent = OPPGK_LABELS[state.oppGk || ''];
+        if (gb) gb.classList.toggle('is-set', !!state.oppGk);
+        // GKのLv: オフェンス中は相手GK、ディフェンス中は自GKのLvを出す
+        const lv = getPresetGkLv(state.mode);
+        const ll = document.getElementById('state-gklv-label');
+        const lt = document.getElementById('state-gklv-text');
+        const lb = document.getElementById('btn-state-gklv');
+        if (ll) ll.textContent = state.mode === 'defense' ? '自GKのLv' : '相手GKのLv';
+        if (lt) lt.textContent = lv ? GKLV_SHORT[lv] : '—';
+        if (lb) lb.classList.toggle('is-set', !!lv);
+    }
+    const OPPGK_LABELS = { '': '—', '1': '1人目', '2': '2人目', '3': '3人目' };
+    const GKLV_SHORT = { LV1: 'Lv1', LV2: 'Lv2', LV3: 'Lv3', LV0: 'Lv0' };
+    // 先に決めておくGKのLv。相手GKは「何人目か」ごと、自GKは名前ごとに覚える
+    function gkLvKey(mode) {
+        return mode === 'defense' ? ['own', state.currentGk || ''] : ['opp', state.oppGk || ''];
+    }
+    function getPresetGkLv(mode) {
+        const k = gkLvKey(mode);
+        const v = (state.gkLvPreset[k[0]] || {})[k[1]];
+        return HA.stats.GK_LVS.includes(v) ? v : '';
+    }
+    function setPresetGkLv(mode, v) {
+        const k = gkLvKey(mode);
+        if (!state.gkLvPreset[k[0]]) state.gkLvPreset[k[0]] = {};
+        state.gkLvPreset[k[0]][k[1]] = v || '';
     }
     // ボタンを押すと選択肢が出て、タップで選ぶ
     const statePicker = document.getElementById('state-picker');
@@ -1173,13 +1232,35 @@ document.addEventListener('DOMContentLoaded', () => {
             saveState();
         });
     });
-    const liveOppGkInput = document.getElementById('live-oppgk-input');
-    if (liveOppGkInput) {
-        liveOppGkInput.addEventListener('input', () => {
-            state.oppGk = liveOppGkInput.value.trim();
+    document.getElementById('btn-state-oppgk').addEventListener('click', () => {
+        openStatePicker('相手GK（今出ているのは何人目か）', [
+            { value: '1', label: '1人目' },
+            { value: '2', label: '2人目' },
+            { value: '3', label: '3人目' },
+            { value: '',  label: '—', note: '決めない' }
+        ], state.oppGk || '', (v) => {
+            state.oppGk = v;
+            applyLiveTagsToUI();   // 人ごとに覚えているLvに切り替わる
             saveState();
         });
-    }
+    });
+    const GKLV_OPTIONS = [
+        { value: 'LV1', label: 'Lv1', note: '中間位置' },
+        { value: 'LV2', label: 'Lv2', note: 'せーのドン' },
+        { value: 'LV3', label: 'Lv3', note: '駆け引き' },
+        { value: 'LV0', label: 'Lv0', note: '動かなかった' },
+        { value: '',    label: '—',   note: '決めない' }
+    ];
+    document.getElementById('btn-state-gklv').addEventListener('click', () => {
+        const who = state.mode === 'defense' ? '自GK' : '相手GK';
+        openStatePicker(who + 'のLv（ふだんの守り方）', GKLV_OPTIONS, getPresetGkLv(state.mode), (v) => {
+            setPresetGkLv(state.mode, v);
+            applyLiveTagsToUI();
+            saveState();
+        });
+    });
+    ui.modeAttack.addEventListener('change', applyLiveTagsToUI);
+    ui.modeDefense.addEventListener('change', applyLiveTagsToUI);
     applyLiveTagsToUI();
 
     // ── 分析担当用 v2: きっかけ（何を狙ったか）を押して数える ──
@@ -1218,7 +1299,7 @@ document.addEventListener('DOMContentLoaded', () => {
             box.appendChild(b);
         });
         const label = document.getElementById('cue-side-label');
-        if (label) label.textContent = state.mode === 'defense' ? '相手のきっかけ（押すたびに1回）' : 'きっかけ（押すたびに1回）';
+        if (label) label.textContent = state.mode === 'defense' ? '相手のきっかけ' : 'きっかけ';
     }
     function undoLastCue() {
         // 今の攻守の側で、最後に押した1回を取り消す
@@ -1251,7 +1332,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── 見やすさ: 文字の大きさ（標準 → 大 → 特大 → 標準）──
     const FONT_SIZE_KEY = 'handball-analyst-font-size-v1';
     const FONT_SIZES = ['normal', 'large', 'xlarge'];
-    const FONT_SIZE_LABELS = { normal: '標準', large: '大', xlarge: '特大' };
+    const FONT_SIZE_LABELS = { normal: '標準', large: '大', xlarge: '特大' };  // ボタンは「文字 大」のように出る
     const btnFontSize = document.getElementById('btn-font-size');
     function applyFontSize(v) {
         const size = FONT_SIZES.includes(v) ? v : 'large';
@@ -2158,6 +2239,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('#edit-gkmove-row .sit-chip').forEach(c => {
             c.classList.toggle('selected', c.getAttribute('data-gkmove') === shot.gkMove);
         });
+        document.querySelectorAll('#edit-gklv-row .sit-chip').forEach(c => {
+            c.classList.toggle('selected', c.getAttribute('data-gklv') === shot.gkLv);
+        });
 
         // 分析担当用: 状況 / アシスト / きっかけ
         document.getElementById('edit-situation-section').classList.toggle('hidden', !HA.stats.needsSituation(shot));
@@ -2225,7 +2309,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // 分析担当用: 状況 / アシスト のチップ（もう一度押すと選択を外す）
-    ['#edit-situation-row', '#edit-assist-row', '#edit-misstype-row', '#edit-gkmove-row'].forEach(sel => {
+    ['#edit-situation-row', '#edit-assist-row', '#edit-misstype-row', '#edit-gkmove-row', '#edit-gklv-row'].forEach(sel => {
         document.querySelectorAll(sel + ' .sit-chip').forEach(chip => {
             chip.addEventListener('click', () => {
                 const was = chip.classList.contains('selected');
@@ -2297,6 +2381,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isShotNow = (newResult === 'goal' || newResult === 'save' || newResult === 'miss');
         shot.missType = (newResult === 'miss') ? pick('#edit-misstype-row', 'data-misstype') : null;
         shot.gkMove = isShotNow ? pick('#edit-gkmove-row', 'data-gkmove') : null;
+        shot.gkLv = isShotNow ? pick('#edit-gklv-row', 'data-gklv') : null;
 // 飛んだ先とミスの中身をそろえる: 枠外を選んだら「枠の外」、ブロックなら飛んだ先は空
         if (newResult === 'miss') {
             if (HA.stats.isOutCourse(shot.course)) shot.missType = 'out';

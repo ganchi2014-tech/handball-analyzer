@@ -8,7 +8,7 @@
                      // 分析担当用の追加列（状況 / 失点のアシスト / きっかけメモ）
                      'situation', 'assist', 'trigger',
                      // v2: 映像を見て後から足す項目 / 試合中の切替 / 試合をまたぐ鍵
-                     'miss_type', 'gk_move', 'opp_gk', 'numbers', 'opp_def', 'match_id'];
+                     'miss_type', 'gk_move', 'opp_gk', 'numbers', 'opp_def', 'match_id', 'gk_lv'];
 
     function escape(v) {
         const s = v == null ? '' : String(v);
@@ -45,7 +45,8 @@
             shot.oppGk || '',
             shot.numbers || '',
             shot.oppDef || '',
-            ((match && match.date) || '') + '_' + ((match && match.opponent) || '')
+            ((match && match.date) || '') + '_' + ((match && match.opponent) || ''),
+            shot.gkLv || ''
         ];
     }
 

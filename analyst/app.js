@@ -173,6 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (snap.matchDate) ui.dateInput.value = snap.matchDate;
             if (snap.matchOpponent) ui.opponentInput.value = snap.matchOpponent;
+            if (typeof applyKindToUI === 'function') applyKindToUI();
             state.cloudMatchId = snap.cloudMatchId || null;
             state.numbers = ['even', 'plus', 'minus', 'seven'].includes(snap.numbers) ? snap.numbers : 'even';
             state.oppDef = ['60', '51', '321', 'other'].includes(snap.oppDef) ? snap.oppDef : '';
@@ -1096,13 +1097,20 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCueBar();
     }
     const NUMBERS_ORDER = ['even', 'plus', 'minus', 'seven'];
-    const NUMBERS_LABELS = { even: '同数', plus: '多い', minus: '少ない', seven: '7人攻撃' };
+    // 記録に残る値は even / plus / minus / seven のまま。画面では何が起きているかで見せる。
+    const NUMBERS_LABELS = { even: 'なし', plus: '相手が退場', minus: '味方が退場', seven: '7人攻撃' };
+    const NUMBERS_TOASTS = {
+        even: '退場なし・7人攻撃なし（ふつうの状態）',
+        plus: '相手が退場中（こちらが1人多い）',
+        minus: '味方が退場中（こちらが1人少ない）',
+        seven: '7人攻撃中（GKを下げて攻めている）'
+    };
     const OPPDEF_ORDER = ['', '60', '51', '321', 'other'];
     const OPPDEF_LABELS = { '': '—', '60': '6:0', '51': '5:1', '321': '3:2:1', other: '他' };
     function applyLiveTagsToUI() {
         const nb = document.getElementById('btn-state-numbers');
         const nt = document.getElementById('state-numbers-text');
-        if (nt) nt.textContent = NUMBERS_LABELS[state.numbers] || '同数';
+        if (nt) nt.textContent = NUMBERS_LABELS[state.numbers] || 'なし';
         if (nb) nb.classList.toggle('is-set', state.numbers !== 'even');   // 同数以外は色を変えて気づけるように
         const db = document.getElementById('btn-state-oppdef');
         const dt = document.getElementById('state-oppdef-text');
@@ -1116,6 +1124,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.numbers = NUMBERS_ORDER[(NUMBERS_ORDER.indexOf(state.numbers) + 1) % NUMBERS_ORDER.length];
         applyLiveTagsToUI();
         saveState();
+        showToast(NUMBERS_TOASTS[state.numbers]);
     });
     document.getElementById('btn-state-oppdef').addEventListener('click', () => {
         state.oppDef = OPPDEF_ORDER[(OPPDEF_ORDER.indexOf(state.oppDef || '') + 1) % OPPDEF_ORDER.length];
@@ -1219,15 +1228,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 相手を「練習」にするボタン
-    const btnPractice = document.getElementById('btn-practice');
-    if (btnPractice) {
-        btnPractice.addEventListener('click', () => {
-            ui.opponentInput.value = '練習';
-            saveState();
-            showToast('相手を「練習」にしました');
+    // 何を記録するか（試合 / 練習）。練習のときは相手の欄を「練習」にして、打ち込めなくする
+    const PRACTICE_NAME = '練習';
+    function applyKindToUI() {
+        const isPractice = (ui.opponentInput.value || '').trim() === PRACTICE_NAME;
+        document.querySelectorAll('#kind-toggle .kind-btn').forEach(b => {
+            b.classList.toggle('selected', (b.getAttribute('data-kind') === 'practice') === isPractice);
         });
+        ui.opponentInput.readOnly = isPractice;
+        ui.opponentInput.classList.toggle('is-practice', isPractice);
     }
+    document.querySelectorAll('#kind-toggle .kind-btn').forEach(b => {
+        b.addEventListener('click', () => {
+            const toPractice = b.getAttribute('data-kind') === 'practice';
+            const isPractice = (ui.opponentInput.value || '').trim() === PRACTICE_NAME;
+            if (toPractice && !isPractice) {
+                ui.opponentInput.value = PRACTICE_NAME;
+                showToast('練習の記録にしました');
+            } else if (!toPractice && isPractice) {
+                ui.opponentInput.value = '';
+                showToast('試合の記録にしました。対戦相手を入れてください');
+            }
+            applyKindToUI();
+            saveState();
+        });
+    });
+    ui.opponentInput.addEventListener('input', applyKindToUI);
+    applyKindToUI();
 
     // ── B2: Undo with toast feedback ──
     ui.btnUndo.addEventListener('click', () => {
@@ -2558,6 +2585,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderPlots();
         calculateStats();
         ui.opponentInput.value = '';
+        if (typeof applyKindToUI === 'function') applyKindToUI();
         const today = new Date();
         const offset = today.getTimezoneOffset() * 60000;
         ui.dateInput.value = new Date(today.getTime() - offset).toISOString().slice(0, 10);

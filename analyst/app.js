@@ -1095,31 +1095,32 @@ document.addEventListener('DOMContentLoaded', () => {
         applyLiveTagsToUI();
         renderCueBar();
     }
+    const NUMBERS_ORDER = ['even', 'plus', 'minus', 'seven'];
+    const NUMBERS_LABELS = { even: '同数', plus: '多い', minus: '少ない', seven: '7人攻撃' };
+    const OPPDEF_ORDER = ['', '60', '51', '321', 'other'];
+    const OPPDEF_LABELS = { '': '—', '60': '6:0', '51': '5:1', '321': '3:2:1', other: '他' };
     function applyLiveTagsToUI() {
-        document.querySelectorAll('#live-numbers-row .sit-chip').forEach(c => {
-            c.classList.toggle('selected', c.getAttribute('data-numbers') === state.numbers);
-        });
-        document.querySelectorAll('#live-oppdef-row .sit-chip').forEach(c => {
-            c.classList.toggle('selected', c.getAttribute('data-oppdef') === state.oppDef);
-        });
+        const nb = document.getElementById('btn-state-numbers');
+        const nt = document.getElementById('state-numbers-text');
+        if (nt) nt.textContent = NUMBERS_LABELS[state.numbers] || '同数';
+        if (nb) nb.classList.toggle('is-set', state.numbers !== 'even');   // 同数以外は色を変えて気づけるように
+        const db = document.getElementById('btn-state-oppdef');
+        const dt = document.getElementById('state-oppdef-text');
+        if (dt) dt.textContent = OPPDEF_LABELS[state.oppDef || ''];
+        if (db) db.classList.toggle('is-set', !!state.oppDef);
         const inp = document.getElementById('live-oppgk-input');
-        if (inp) inp.value = state.oppGk || '';
+        if (inp && inp.value !== (state.oppGk || '')) inp.value = state.oppGk || '';
     }
-    document.querySelectorAll('#live-numbers-row .sit-chip').forEach(c => {
-        c.addEventListener('click', () => {
-            state.numbers = c.getAttribute('data-numbers');
-            applyLiveTagsToUI();
-            saveState();
-        });
+    // 押すたびに次の状態へ
+    document.getElementById('btn-state-numbers').addEventListener('click', () => {
+        state.numbers = NUMBERS_ORDER[(NUMBERS_ORDER.indexOf(state.numbers) + 1) % NUMBERS_ORDER.length];
+        applyLiveTagsToUI();
+        saveState();
     });
-    document.querySelectorAll('#live-oppdef-row .sit-chip').forEach(c => {
-        c.addEventListener('click', () => {
-            // もう一度押すと未選択に戻る
-            const v = c.getAttribute('data-oppdef');
-            state.oppDef = (state.oppDef === v) ? '' : v;
-            applyLiveTagsToUI();
-            saveState();
-        });
+    document.getElementById('btn-state-oppdef').addEventListener('click', () => {
+        state.oppDef = OPPDEF_ORDER[(OPPDEF_ORDER.indexOf(state.oppDef || '') + 1) % OPPDEF_ORDER.length];
+        applyLiveTagsToUI();
+        saveState();
     });
     const liveOppGkInput = document.getElementById('live-oppgk-input');
     if (liveOppGkInput) {
@@ -1166,9 +1167,9 @@ document.addEventListener('DOMContentLoaded', () => {
             box.appendChild(b);
         });
         const label = document.getElementById('cue-side-label');
-        if (label) label.textContent = state.mode === 'defense' ? '相手のきっかけ' : 'きっかけ';
+        if (label) label.textContent = state.mode === 'defense' ? '相手のきっかけ（押すたびに1回）' : 'きっかけ（押すたびに1回）';
     }
-    document.getElementById('btn-cue-undo').addEventListener('click', () => {
+    function undoLastCue() {
         // 今の攻守の側で、最後に押した1回を取り消す
         for (let i = state.cues.length - 1; i >= 0; i--) {
             if (state.cues[i].mode === state.mode) {
@@ -1180,8 +1181,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         showToast('取り消す記録がありません');
-    });
-    document.getElementById('btn-cue-edit').addEventListener('click', () => {
+    }
+    function editCueKinds() {
         const input = window.prompt('きっかけの項目を「、」で区切って入力（最大8つ）', cueKinds.join('、'));
         if (input == null) return;
         const list = input.split(/[、,]/).map(x => x.trim()).filter(Boolean).slice(0, 8);
@@ -1189,10 +1190,34 @@ document.addEventListener('DOMContentLoaded', () => {
         cueKinds = list;
         try { localStorage.setItem(CUE_KINDS_KEY, JSON.stringify(cueKinds)); } catch (e) {}
         renderCueBar();
-    });
+    }
+    document.getElementById('btn-cue-undo').addEventListener('click', undoLastCue);
+    document.getElementById('btn-cue-edit').addEventListener('click', editCueKinds);
     ui.modeAttack.addEventListener('change', renderCueBar);
     ui.modeDefense.addEventListener('change', renderCueBar);
     renderCueBar();
+
+    // ── 見やすさ: 文字の大きさ（標準 → 大 → 特大 → 標準）──
+    const FONT_SIZE_KEY = 'handball-analyst-font-size-v1';
+    const FONT_SIZES = ['normal', 'large', 'xlarge'];
+    const FONT_SIZE_LABELS = { normal: '標準', large: '大', xlarge: '特大' };
+    const btnFontSize = document.getElementById('btn-font-size');
+    function applyFontSize(v) {
+        const size = FONT_SIZES.includes(v) ? v : 'large';
+        document.documentElement.setAttribute('data-fs', size);
+        const fst = document.getElementById('font-size-text');
+        if (fst) fst.textContent = FONT_SIZE_LABELS[size];
+        return size;
+    }
+    let currentFontSize = applyFontSize(document.documentElement.getAttribute('data-fs'));
+    if (btnFontSize) {
+        btnFontSize.addEventListener('click', () => {
+            currentFontSize = FONT_SIZES[(FONT_SIZES.indexOf(currentFontSize) + 1) % FONT_SIZES.length];
+            applyFontSize(currentFontSize);
+            try { localStorage.setItem(FONT_SIZE_KEY, currentFontSize); } catch (e) {}
+            showToast('文字の大きさ: ' + FONT_SIZE_LABELS[currentFontSize]);
+        });
+    }
 
     // 相手を「練習」にするボタン
     const btnPractice = document.getElementById('btn-practice');

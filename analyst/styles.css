@@ -1653,3 +1653,121 @@ body {
     padding: 5px 8px;
     cursor: pointer;
 }
+
+/* ── 状態の切替（1つのボタンに今の状態を大きく出す）── */
+.live-tags { display: flex; flex-wrap: nowrap; gap: 6px; padding: 0; align-items: stretch; }
+.state-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    min-height: 48px;
+    padding: 4px 4px;
+    background: rgba(255,255,255,0.1);
+    border: 2px solid rgba(255,255,255,0.55);
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    font-family: inherit;
+}
+.state-btn small { font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.9); line-height: 1.1; }
+.state-btn b { font-size: 1rem; font-weight: 800; line-height: 1.15; white-space: nowrap; }
+.state-btn.is-set { background: rgba(241, 196, 15, 0.28); border-color: #f1c40f; }
+.state-btn.fs-tool { flex: 0 0 56px; }
+.state-input input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: #fff;
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 800;
+    padding: 0;
+    outline: none;
+    font-family: inherit;
+}
+.state-input input::placeholder { color: rgba(255,255,255,0.7); font-weight: 600; }
+
+/* ── きっかけ（横いっぱいに並べ、回数を大きく）── */
+.cue-bar { display: flex; flex-direction: column; align-items: stretch; gap: 3px; padding: 0; }
+.cue-bar .live-tag-label { font-size: 0.72rem; font-weight: 700; color: rgba(255,255,255,0.9); }
+.cue-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(74px, 1fr)); gap: 6px; }
+.cue-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 46px;
+    padding: 4px 6px;
+    background: rgba(241, 196, 15, 0.16);
+    border: 2px solid rgba(241, 196, 15, 0.85);
+    color: #fff;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 800;
+    white-space: nowrap;
+    font-family: inherit;
+}
+.cue-btn .cue-count { margin-left: 0; min-width: 0; color: #ffe066; font-size: 1.2em; font-weight: 800; }
+.cue-head { display: flex; align-items: center; gap: 6px; }
+.cue-head .live-tag-label { flex: 1; }
+.cue-tool {
+    min-height: 34px;
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.5);
+    color: #fff;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 2px 10px;
+    white-space: nowrap;
+    font-family: inherit;
+}
+/* 上の段は縮めない（縮むと文字が欠ける） */
+.analyst-banner, .match-info, .scoreboard, .gk-toggle, .live-tags, .cue-bar, .mode-row { flex-shrink: 0; }
+
+/* ── 見やすさ（文字の大きさ 標準 / 大 / 特大）──
+   ほとんどの文字は rem なので、土台の大きさを変えると全体が大きくなる。
+   「大」「特大」では、薄い文字と枠線も濃くし、押す所を広げる。 */
+html[data-fs="large"]  { font-size: 18.5px; }
+html[data-fs="xlarge"] { font-size: 21px; }
+html[data-fs="large"], html[data-fs="xlarge"] {
+    --text-muted: rgba(255, 255, 255, 0.96);
+    --border-color: rgba(255, 255, 255, 0.5);
+}
+html[data-fs="large"] body, html[data-fs="xlarge"] body { font-weight: 500; }
+
+/* 小さすぎる文字の下限をそろえる */
+html[data-fs="large"] .step-hint, html[data-fs="xlarge"] .step-hint,
+html[data-fs="large"] .table-note, html[data-fs="xlarge"] .table-note,
+html[data-fs="large"] .edit-label, html[data-fs="xlarge"] .edit-label { font-size: 0.85rem; color: #fff; }
+html[data-fs="large"] .player-btn, html[data-fs="xlarge"] .player-btn { font-size: 0.85rem; font-weight: 700; }
+html[data-fs="large"] .gk-btn, html[data-fs="xlarge"] .gk-btn { font-size: 0.9rem; font-weight: 700; padding: 8px 6px; }
+
+/* 押す所を広く、文字を太く */
+html[data-fs="large"] .sit-chip, html[data-fs="xlarge"] .sit-chip,
+html[data-fs="large"] .atk-chip, html[data-fs="xlarge"] .atk-chip { min-height: 44px; font-size: 0.88rem; color: #fff; }
+html[data-fs="large"] .zone-btn, html[data-fs="xlarge"] .zone-btn { font-size: 1.1rem; font-weight: 700; }
+html[data-fs="large"] .out-btn, html[data-fs="xlarge"] .out-btn { font-size: 0.9rem; color: #fff; border-width: 2px; }
+html[data-fs="large"] .course-mid .out-btn.side, html[data-fs="xlarge"] .course-mid .out-btn.side { flex-basis: 64px; }
+html[data-fs="large"] .gkmove-btn, html[data-fs="xlarge"] .gkmove-btn { min-height: 64px; font-size: 1.1rem; }
+html[data-fs="large"] .block-btn, html[data-fs="xlarge"] .block-btn { min-height: 52px; font-size: 1rem; color: #fff; }
+
+/* 選んだ状態を色だけに頼らず、太い枠でも示す */
+html[data-fs="large"] .sit-chip.selected, html[data-fs="xlarge"] .sit-chip.selected,
+html[data-fs="large"] .atk-chip.selected, html[data-fs="xlarge"] .atk-chip.selected,
+html[data-fs="large"] .gk-btn.active, html[data-fs="xlarge"] .gk-btn.active {
+    outline: 3px solid #fff;
+    outline-offset: -3px;
+}
+
+/* 文字を大きくした分、上の飾りを詰めてコートの高さを守る */
+html[data-fs="large"] .analyst-banner span, html[data-fs="xlarge"] .analyst-banner span { display: none; }
+html[data-fs="large"] .analyst-banner, html[data-fs="xlarge"] .analyst-banner { padding: 3px 8px; font-size: 0.8rem; }
+html[data-fs="large"] .scoreboard, html[data-fs="xlarge"] .scoreboard { padding: 4px 12px; }
+html[data-fs="large"] #app, html[data-fs="xlarge"] #app { gap: 6px; }
+html[data-fs="large"] .court-container, html[data-fs="xlarge"] .court-container { min-height: 190px; }
+html[data-fs="large"] .gk-toggle, html[data-fs="xlarge"] .gk-toggle { padding-top: 3px; padding-bottom: 3px; }

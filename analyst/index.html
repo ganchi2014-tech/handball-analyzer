@@ -21,7 +21,7 @@
         });
       }
     </script>
-    <link rel="stylesheet" href="styles.css?v=a3">
+    <link rel="stylesheet" href="styles.css?v=a4">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
@@ -51,6 +51,15 @@
         console.warn('[analyzer FB init]', e);
         window.FIREBASE_READY = false;
       }
+    </script>
+    <!-- 文字の大きさ（最初は「大」）。描く前に決めて、ちらつきを防ぐ -->
+    <script>
+        (function () {
+            var v = 'large';
+            try { v = localStorage.getItem('handball-analyst-font-size-v1') || 'large'; } catch (e) {}
+            if (['normal', 'large', 'xlarge'].indexOf(v) < 0) v = 'large';
+            document.documentElement.setAttribute('data-fs', v);
+        })();
     </script>
 </head>
 <body>
@@ -89,40 +98,25 @@
             <!-- buttons populated by JS from roster -->
         </div>
 
-        <!-- 分析担当用 v2: 試合中の切替（押した状態が、以後の記録すべてに付く） -->
+        <!-- 分析担当用 v2: 試合中の切替（押すたびに次へ。今の状態が大きく出て、以後の記録すべてに付く） -->
         <div class="live-tags" id="live-tags">
-            <div class="live-tag-group">
-                <span class="live-tag-label">人数</span>
-                <div class="sit-chip-row" id="live-numbers-row">
-                    <button type="button" class="sit-chip selected" data-numbers="even">同数</button>
-                    <button type="button" class="sit-chip" data-numbers="plus">多い</button>
-                    <button type="button" class="sit-chip" data-numbers="minus">少ない</button>
-                    <button type="button" class="sit-chip" data-numbers="seven">7人攻撃</button>
-                </div>
-            </div>
-            <div class="live-tag-group">
-                <span class="live-tag-label">相手守備</span>
-                <div class="sit-chip-row" id="live-oppdef-row">
-                    <button type="button" class="sit-chip" data-oppdef="60">6:0</button>
-                    <button type="button" class="sit-chip" data-oppdef="51">5:1</button>
-                    <button type="button" class="sit-chip" data-oppdef="321">3:2:1</button>
-                    <button type="button" class="sit-chip" data-oppdef="other">他</button>
-                </div>
-            </div>
-            <div class="live-tag-group">
-                <span class="live-tag-label">相手GK</span>
-                <input type="text" id="live-oppgk-input" class="live-tag-input" inputmode="numeric" maxlength="3" placeholder="背番号">
-            </div>
+            <button type="button" class="state-btn" id="btn-state-numbers"><small>人数</small><b id="state-numbers-text">同数</b></button>
+            <button type="button" class="state-btn" id="btn-state-oppdef"><small>相手守備</small><b id="state-oppdef-text">—</b></button>
+            <label class="state-btn state-input"><small>相手GK</small>
+                <input type="text" id="live-oppgk-input" inputmode="numeric" maxlength="3" placeholder="番号">
+            </label>
+            <button type="button" class="state-btn fs-tool" id="btn-font-size"><small>文字</small><b id="font-size-text">大</b></button>
         </div>
 
         <!-- 分析担当用 v2: きっかけ（何を狙ったか）。シュートまで行かなくても、押すたびに1回数える -->
         <div class="cue-bar" id="cue-bar">
-            <span class="live-tag-label" id="cue-side-label">きっかけ</span>
+            <div class="cue-head">
+                <span class="live-tag-label" id="cue-side-label">きっかけ（押すたびに1回）</span>
+                <button type="button" class="cue-tool" id="btn-cue-undo">↩ 取消</button>
+                <button type="button" class="cue-tool" id="btn-cue-edit">✎ 項目</button>
+            </div>
             <div class="cue-buttons" id="cue-buttons"></div>
-            <button type="button" class="cue-tool" id="btn-cue-undo" title="直前の1回を取り消す">↩</button>
-            <button type="button" class="cue-tool" id="btn-cue-edit" title="項目の名前を変える">✎</button>
         </div>
-
 
         <!-- Mode Toggle + 出場メンバー（1行に統合） -->
         <div class="mode-row">
@@ -671,9 +665,9 @@
         </div>
     </div>
 
-    <script src="lib/roster.js?v=a3"></script>
-    <script src="lib/stats.js?v=a3"></script>
-    <script src="lib/csv.js?v=a3"></script>
-    <script src="app.js?v=a3"></script>
+    <script src="lib/roster.js?v=a4"></script>
+    <script src="lib/stats.js?v=a4"></script>
+    <script src="lib/csv.js?v=a4"></script>
+    <script src="app.js?v=a4"></script>
 </body>
 </html>

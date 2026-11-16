@@ -1163,7 +1163,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lb) lb.classList.toggle('is-set', !!lv);
     }
     const OPPGK_LABELS = { '': '—', '1': '1人目', '2': '2人目', '3': '3人目' };
-    const GKLV_SHORT = { LV1: 'Lv1', LV2: 'Lv2', LV3: 'Lv3', LV0: 'Lv0' };
+    const GKLV_SHORT = { LV1: '✋', LV2: '✊', LV3: '✌', LV0: '✖' };
     // 先に決めておくGKのLv。相手GKは「何人目か」ごと、自GKは名前ごとに覚える
     function gkLvKey(mode) {
         return mode === 'defense' ? ['own', state.currentGk || ''] : ['opp', state.oppGk || ''];
@@ -1245,10 +1245,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     const GKLV_OPTIONS = [
-        { value: 'LV1', label: 'Lv1', note: '中間位置' },
-        { value: 'LV2', label: 'Lv2', note: 'せーのドン' },
-        { value: 'LV3', label: 'Lv3', note: '駆け引き' },
-        { value: 'LV0', label: 'Lv0', note: '動かなかった' },
+        { value: 'LV1', label: '✋', note: '中間位置' },
+        { value: 'LV2', label: '✊', note: 'せーのドン' },
+        { value: 'LV3', label: '✌', note: 'かけひき' },
+        { value: 'LV0', label: '✖', note: '動かなかった' },
         { value: '',    label: '—',   note: '決めない' }
     ];
     document.getElementById('btn-state-gklv').addEventListener('click', () => {

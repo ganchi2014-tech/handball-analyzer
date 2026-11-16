@@ -21,7 +21,7 @@
         });
       }
     </script>
-    <link rel="stylesheet" href="styles.css?v=a5">
+    <link rel="stylesheet" href="styles.css?v=a6">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
@@ -65,13 +65,18 @@
 <body>
     <div id="app" class="attack-mode">
         <!-- 分析担当用の表示（生徒用と取り違えないため） -->
-        <div class="analyst-banner">📋 分析担当用<span>選手の記録とは別のシートにたまります</span></div>
+        <div class="analyst-banner">
+            <div class="banner-title">📋 分析担当用<span>選手の記録とは別のシートにたまります</span></div>
+            <!-- 何を記録するか（試合 / 練習）。練習を選ぶと、相手の欄は使わない -->
+            <div class="kind-toggle" id="kind-toggle">
+                <button type="button" class="kind-btn selected" data-kind="match">試合</button>
+                <button type="button" class="kind-btn" data-kind="practice">練習</button>
+            </div>
+        </div>
         <!-- Match Info -->
         <div class="match-info">
             <input type="date" id="match-date" class="info-input">
-            <span class="vs">VS</span>
-            <input type="text" id="match-opponent" class="info-input" placeholder="対戦相手を入力">
-            <button type="button" id="btn-practice" class="practice-btn" title="相手を「練習」にする">練習</button>
+            <input type="text" id="match-opponent" class="info-input" placeholder="対戦相手">
             <button type="button" id="btn-settings" class="settings-btn" title="設定">⚙</button>
         </div>
 
@@ -100,7 +105,7 @@
 
         <!-- 分析担当用 v2: 試合中の切替（押すたびに次へ。今の状態が大きく出て、以後の記録すべてに付く） -->
         <div class="live-tags" id="live-tags">
-            <button type="button" class="state-btn" id="btn-state-numbers"><small>人数</small><b id="state-numbers-text">同数</b></button>
+            <button type="button" class="state-btn" id="btn-state-numbers"><small>退場・7人攻撃</small><b id="state-numbers-text">なし</b></button>
             <button type="button" class="state-btn" id="btn-state-oppdef"><small>相手守備</small><b id="state-oppdef-text">—</b></button>
             <label class="state-btn state-input"><small>相手GK</small>
                 <input type="text" id="live-oppgk-input" inputmode="numeric" maxlength="3" placeholder="番号">
@@ -667,9 +672,9 @@
         </div>
     </div>
 
-    <script src="lib/roster.js?v=a5"></script>
-    <script src="lib/stats.js?v=a5"></script>
-    <script src="lib/csv.js?v=a5"></script>
-    <script src="app.js?v=a5"></script>
+    <script src="lib/roster.js?v=a6"></script>
+    <script src="lib/stats.js?v=a6"></script>
+    <script src="lib/csv.js?v=a6"></script>
+    <script src="app.js?v=a6"></script>
 </body>
 </html>

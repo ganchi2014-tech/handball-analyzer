@@ -1,0 +1,30 @@
+{
+  "id": "/handball-analyzer/analyst/",
+  "name": "分析担当用（ハンド分析）",
+  "short_name": "分析担当",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "ja",
+  "background_color": "#0d2b25",
+  "theme_color": "#f1c40f",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

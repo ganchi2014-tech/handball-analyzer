@@ -1462,3 +1462,9 @@ body {
     .controls .btn-action { padding: 9px 2px; font-size: 0.78rem; white-space: nowrap; min-height: 44px; }
     .dashboard .stat-box, .dashboard > * { padding-top: 3px; padding-bottom: 3px; }
 }
+
+/* ── ホーム画面から開いたとき（アプリの形）に、上の時計の帯や下の線に重ならないようにする ── */
+#app { padding-top: max(8px, env(safe-area-inset-top)); padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+@media (max-height: 780px) {
+    #app { padding-top: max(4px, env(safe-area-inset-top)); padding-bottom: max(6px, env(safe-area-inset-bottom)); }
+}

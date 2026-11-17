@@ -1870,3 +1870,9 @@ html[data-fs="large"] .court-container, html[data-fs="xlarge"] .court-container 
     .cue-head .state-btn, .cue-head button { min-height: 30px; padding-top: 2px; padding-bottom: 2px; }
     .court-container, html[data-fs="large"] .court-container, html[data-fs="xlarge"] .court-container { flex-basis: 175px; min-height: 175px; }
 }
+
+/* ── ホーム画面から開いたとき（アプリの形）に、上の時計の帯や下の線に重ならないようにする ── */
+#app { padding-top: max(8px, env(safe-area-inset-top)); padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+@media (max-height: 780px) {
+    #app { padding-top: max(4px, env(safe-area-inset-top)); padding-bottom: max(6px, env(safe-area-inset-bottom)); }
+}

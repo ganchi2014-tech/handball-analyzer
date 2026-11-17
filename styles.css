@@ -1450,3 +1450,15 @@ body {
 /* まだ入れていない状態のボタンは色を付けて、入れ忘れに気づけるようにする */
 .state-btn.is-empty { background: rgba(230, 126, 34, 0.30); border: 2px dashed #f39c12; }
 .state-btn.is-empty b { color: #ffd08a; }
+
+/* ── ブラウザで開くと上下の帯の分だけ画面が短くなる。下のボタンが切れないように、
+      入りきらないときは縦に動かせるようにし、短い画面では下のボタンを1段にまとめる ── */
+#app { overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.court-container { flex: 1 0 200px; min-height: 200px; }
+.match-info, .scoreboard, .gk-toggle, .live-tags, .mode-row, .dashboard, .controls { flex-shrink: 0; }
+@media (max-height: 780px) {
+    #app { gap: 5px; padding-top: 4px; padding-bottom: 6px; }
+    .controls { grid-template-columns: repeat(4, 1fr); gap: 4px; }
+    .controls .btn-action { padding: 9px 2px; font-size: 0.78rem; white-space: nowrap; min-height: 44px; }
+    .dashboard .stat-box, .dashboard > * { padding-top: 3px; padding-bottom: 3px; }
+}

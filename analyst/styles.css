@@ -1876,3 +1876,10 @@ html[data-fs="large"] .court-container, html[data-fs="xlarge"] .court-container 
 @media (max-height: 780px) {
     #app { padding-top: max(4px, env(safe-area-inset-top)); padding-bottom: max(6px, env(safe-area-inset-bottom)); }
 }
+
+/* 自チームの点の取り方（得点のアシスト）は、失点側の赤と分けて青で出す */
+.opponent-tag.own {
+    background: rgba(52, 152, 219, 0.2);
+    border-color: rgba(52, 152, 219, 0.6);
+}
+.opponent-pattern.own strong { color: var(--primary); }

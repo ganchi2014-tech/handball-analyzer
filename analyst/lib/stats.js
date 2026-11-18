@@ -277,6 +277,27 @@
         return 'C';
     }
 
+    // 自チームの得点の読み取り: アシストの出どころ / よく出る形（アシスト × 状況）
+    function aggregateOwnAssist(shots) {
+        const byAssist = {};
+        const patternMap = {};
+        let goals = 0, goalsNoAssist = 0;
+        (shots || []).forEach(s => {
+            if (s.mode !== 'attack' || !needsSituation(s) || s.result !== 'goal') return;
+            goals++;
+            if (!s.assist) { goalsNoAssist++; return; }
+            byAssist[s.assist] = (byAssist[s.assist] || 0) + 1;
+            const sit = SITUATIONS.includes(s.situation) ? s.situation : 'none';
+            const key = [s.assist, sit].join('|');
+            patternMap[key] = (patternMap[key] || 0) + 1;
+        });
+        const patterns = Object.keys(patternMap).map(k => {
+            const p = k.split('|');
+            return { assist: p[0], situation: p[1], count: patternMap[k] };
+        }).sort((a, b) => b.count - a.count);
+        return { byAssist, patterns, goals, goalsNoAssist };
+    }
+
     // 相手の攻撃の読み取り: 状況ごとの得点 / アシストの出どころ / よく出る形
     function aggregateOpponentPatterns(shots) {
         const bySituation = emptySituationRow();   // g = 失点, s = 打たれた数
@@ -319,6 +340,7 @@
         aggregateSituationByPlayer,
         aggregateSituationByGk,
         sideOf,
+        aggregateOwnAssist,
         aggregateOpponentPatterns
     };
 })();

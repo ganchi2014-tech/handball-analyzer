@@ -1,18 +1,18 @@
 // Service Worker - handball-analyzer 分析担当用 v1 (オフライン起動対応)
 // 遠征先の圏外体育館でも起動できるよう、全資産をプリキャッシュする。
 // 記録は localStorage、送信はオンライン復帰後でよい設計。
-const CACHE_NAME = 'handball-analyst-v14';
+const CACHE_NAME = 'handball-analyst-v15';
 
 const ASSETS = [
   './',
   './index.html',
   './manifest.webmanifest',
   './icons/icon-192.png',
-  './styles.css?v=a14',
-  './lib/roster.js?v=a14',
-  './lib/stats.js?v=a14',
-  './lib/csv.js?v=a14',
-  './app.js?v=a14',
+  './styles.css?v=a15',
+  './lib/roster.js?v=a15',
+  './lib/stats.js?v=a15',
+  './lib/csv.js?v=a15',
+  './app.js?v=a15',
   'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
   'https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js',

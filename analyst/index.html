@@ -25,7 +25,7 @@
         });
       }
     </script>
-    <link rel="stylesheet" href="styles.css?v=a14">
+    <link rel="stylesheet" href="styles.css?v=a15">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
@@ -250,10 +250,10 @@
                 <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
             </div>
 
-            <!-- Step 3: 失点のアシスト（失点を保存した直後に出る） -->
+            <!-- Step 3: アシスト（得点・失点を保存した直後に出る） -->
             <div id="step-assist" class="step hidden">
                 <h3>アシスト</h3>
-                <p class="step-hint">点を取った選手にボールを渡した場所（左右は画面の向き）</p>
+                <p class="step-hint" id="assist-hint">点を取った選手にボールを渡した場所（左右は画面の向き）</p>
                 <div class="assist-grid">
                     <button type="button" class="assist-btn" data-assist="L45">左45</button>
                     <button type="button" class="assist-btn" data-assist="C">センター</button>
@@ -400,7 +400,8 @@
                         <li>シューターとゴールの間にDFがいなかったか。いなければ「ノーマーク」。</li>
                         <li>残りは打ち方で「ジャンプ」か「ステップ」。</li>
                     </ol>
-                    <p><strong>アシスト</strong>（失点したときだけ）。点を取った選手にボールを渡した場所。左右は画面の向き。パスなしで持ち込んだら「自分で持ち込んだ」。</p>
+                    <p><strong>アシスト</strong>（得点・失点したとき。7mは聞かない）。点を取った選手にボールを渡した場所。パスなしで持ち込んだら「自分で持ち込んだ」。</p>
+                    <p>自チームの得点は、パスを出した選手のポジションで選ぶ（自チームの左45・右45）。相手の得点（失点）は、画面の向きの左右で選ぶ。</p>
                     <p><strong>きっかけ</strong>は試合後に映像を見て付ける。記録を長押し → 編集で入力する。</p>
                     <p>追いつかないときは、結果と選手を先に入れる。状況は「あとで入れる」で進め、画面下の「状況 未入力」から直す。</p>
                 </div>
@@ -473,7 +474,7 @@
             </div>
 
             <div class="edit-section" id="edit-assist-section">
-                <div class="edit-label">アシスト（失点のみ・左右は画面の向き）</div>
+                <div class="edit-label" id="edit-assist-label">アシスト</div>
                 <div class="sit-chip-row wrap" id="edit-assist-row">
                     <button type="button" class="sit-chip" data-assist="L45">左45</button>
                     <button type="button" class="sit-chip" data-assist="C">センター</button>
@@ -623,6 +624,11 @@
             <div class="table-note">押した回数（シュートまで行かなかった分も含む）</div>
             <div id="summary-cues" class="opponent-block"></div>
 
+            <h4 style="margin-top:15px; margin-bottom:4px; color:#fff;">自チームの点の取り方</h4>
+            <div class="table-note">得点のアシスト（7mは除く）。パスを出したポジション</div>
+            <div id="own-assist" class="opponent-block"></div>
+            <div id="own-patterns" class="opponent-block"></div>
+
             <h4 style="margin-top:15px; margin-bottom:4px; color:#fff;">相手の点の取り方</h4>
             <div class="table-note">失点 / 打たれた数（7mは除く）。左右は画面の向き</div>
             <div id="opponent-situation" class="opponent-block"></div>
@@ -704,9 +710,9 @@
         </div>
     </div>
 
-    <script src="lib/roster.js?v=a14"></script>
-    <script src="lib/stats.js?v=a14"></script>
-    <script src="lib/csv.js?v=a14"></script>
-    <script src="app.js?v=a14"></script>
+    <script src="lib/roster.js?v=a15"></script>
+    <script src="lib/stats.js?v=a15"></script>
+    <script src="lib/csv.js?v=a15"></script>
+    <script src="app.js?v=a15"></script>
 </body>
 </html>

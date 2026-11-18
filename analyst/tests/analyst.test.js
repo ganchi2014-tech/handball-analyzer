@@ -228,3 +228,45 @@ describe('分析担当用 v2: 飛んだ先・GKの動き・きっかけ', () => 
         expect(cols[16]).toBe('クロス');
     });
 });
+
+describe('HA.stats.aggregateOwnAssist（自チームの得点のアシスト）', () => {
+    const shots = [
+        { mode: 'attack', result: 'goal', attackType: 'set', situation: 'free', assist: 'L45', player: 'A' },
+        { mode: 'attack', result: 'goal', attackType: 'set', situation: 'free', assist: 'L45', player: 'B' },
+        { mode: 'attack', result: 'goal', attackType: 'fast', situation: 'free', assist: 'SELF', player: 'A' },
+        { mode: 'attack', result: 'goal', attackType: 'set', situation: 'jump', player: 'A' },              // アシスト未入力
+        { mode: 'attack', result: 'save', attackType: 'set', situation: 'free', assist: 'C', player: 'A' }, // 得点でない
+        { mode: 'attack', result: 'goal', attackType: '7m', player: 'A' },                                   // 7m は対象外
+        { mode: 'defense', result: 'goal', attackType: 'set', situation: 'free', assist: 'L45' }            // 相手
+    ];
+    const r = HA.stats.aggregateOwnAssist(shots);
+    test('得点だけを数え、7m と相手の得点は入らない', () => {
+        expect(r.goals).toBe(4);
+        expect(r.goalsNoAssist).toBe(1);
+    });
+    test('アシストの出どころを数える', () => {
+        expect(r.byAssist.L45).toBe(2);
+        expect(r.byAssist.SELF).toBe(1);
+        expect(r.byAssist.C).toBe(undefined);
+    });
+    test('同じ形（アシスト × 状況）は回数の多い順', () => {
+        expect(r.patterns[0]).toEqual({ assist: 'L45', situation: 'free', count: 2 });
+    });
+    test('空でも落ちない', () => {
+        expect(HA.stats.aggregateOwnAssist([]).goals).toBe(0);
+        expect(HA.stats.aggregateOwnAssist(null).goals).toBe(0);
+    });
+});
+
+describe('HA.csv（得点のアシスト）', () => {
+    test('自チームの得点の行にも assist が入る', () => {
+        const csv = HA.csv.matchToCsv({ date: '2026-11-19', opponent: 'Test', shots: [
+            { period: 1, time: 10, mode: 'attack', result: 'goal', attackType: 'set', situation: 'free', assist: 'L45', x: 50, y: 50 }
+        ] }, []);
+        const lines = csv.replace(/^﻿/, '').split(/\r?\n/);
+        const head = lines[0].split(',');
+        const row = lines[1].split(',');
+        expect(row[head.indexOf('mode')]).toBe('attack');
+        expect(row[head.indexOf('assist')]).toBe('L45');
+    });
+});

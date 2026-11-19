@@ -760,6 +760,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (g) g.classList.add('hidden');
         stepSituation.classList.add('hidden');
         stepAssist.classList.add('hidden');
+        const sap = document.getElementById('step-assist-player');
+        if (sap) sap.classList.add('hidden');
+        ui.modal.classList.remove('assist-player-mode');
         attackTypeRow.style.display = '';
         modalTitle.textContent = 'シュート結果';
         pendingAssistShotId = null;
@@ -804,11 +807,92 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // 得点・失点を保存した直後にアシストを聞く（閉じても得点・失点の記録は残る）
-    const ASSIST_HINT = {
-        attack: 'パスを出したポジション（自チームの呼び方）',
-        defense: '点を取った選手にボールを渡した場所（左右は画面の向き）'
-    };
+    //   得点 = パスを出した「選手」を選ぶ（黄色い枠の別画面）
+    //   失点 = ボールを渡した「場所」を選ぶ（今までどおり）
+    const stepAssistPlayer = document.getElementById('step-assist-player');
+    const assistPlayerGrid = document.getElementById('assist-player-grid');
+    const assistBenchGrid = document.getElementById('assist-bench-grid');
+    const assistBenchToggle = document.getElementById('assist-bench-toggle');
+    const ASSIST_LOCK_MS = 600;   // シュートした選手を押した指の2度押しを拾わないための待ち時間
+    let assistLockUntil = 0;
+    let assistLockTimer = null;
+
+    function rosterIdOf(name) {
+        const entry = (state.roster || []).find(p => p && p.name === name);
+        return (entry && entry.rosterId) || null;
+    }
+    function assistPlayerBtn(name) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'assist-player-btn';
+        btn.textContent = name;
+        btn.addEventListener('click', () => finishAssistPlayer({ player: name }));
+        return btn;
+    }
+    function openAssistPlayerStep(shot) {
+        ui.modal.classList.remove('hidden');
+        ui.stepResult.classList.add('hidden');
+        ui.stepCourse.classList.add('hidden');
+        ui.stepPlayer.classList.add('hidden');
+        ui.stepToReason.classList.add('hidden');
+        stepSituation.classList.add('hidden');
+        document.getElementById('step-gkmove').classList.add('hidden');
+        stepAssist.classList.add('hidden');
+        attackTypeRow.style.display = 'none';
+        modalTitle.textContent = '得点を記録しました';
+        ui.modal.classList.add('assist-player-mode');
+
+        const scorer = shot.player || '';
+        document.getElementById('assist-scorer').textContent =
+            scorer ? `得点：${scorer}` : '得点：選手なし';
+
+        // 出場中（シュートした選手は除く）。出場メンバー未設定なら全員を出す
+        const lineup = (state.lineup || []).filter(p => p !== scorer);
+        const everyone = playerPositions.filter(p => p !== scorer);
+        const main = lineup.length > 0 ? lineup : everyone;
+        const bench = lineup.length > 0 ? everyone.filter(p => !lineup.includes(p)) : [];
+        assistPlayerGrid.innerHTML = '';
+        main.forEach(p => assistPlayerGrid.appendChild(assistPlayerBtn(p)));
+        assistBenchGrid.innerHTML = '';
+        bench.forEach(p => assistBenchGrid.appendChild(assistPlayerBtn(p)));
+        assistBenchGrid.classList.add('hidden');
+        assistBenchToggle.textContent = '▶ ベンチから選ぶ';
+        assistBenchToggle.classList.toggle('hidden', bench.length === 0);
+
+        // 開いた直後は押せない（薄く表示）。少し待ってから押せるようにする
+        stepAssistPlayer.classList.add('locked');
+        assistLockUntil = Date.now() + ASSIST_LOCK_MS;
+        if (assistLockTimer) clearTimeout(assistLockTimer);
+        assistLockTimer = setTimeout(() => stepAssistPlayer.classList.remove('locked'), ASSIST_LOCK_MS);
+
+        stepAssistPlayer.classList.remove('hidden');
+        pendingAssistShotId = shot.id;
+    }
+    function finishAssistPlayer(choice) {
+        if (Date.now() < assistLockUntil) return;   // 開いた直後の押し間違いは受け付けない
+        const shot = state.shots.find(s => s.id === pendingAssistShotId);
+        if (shot) {
+            const name = (choice && choice.player) || null;
+            shot.assistPlayer = name;
+            shot.assistRosterId = name ? rosterIdOf(name) : null;
+            shot.assist = (choice && choice.self) ? 'SELF' : null;
+            saveState();
+        }
+        window.closeModal();
+    }
+    assistBenchToggle.addEventListener('click', () => {
+        const hidden = assistBenchGrid.classList.toggle('hidden');
+        assistBenchToggle.textContent = (hidden ? '▶' : '▼') + ' ベンチから選ぶ';
+    });
+    document.getElementById('btn-assist-player-self').addEventListener('click', () => finishAssistPlayer({ self: true }));
+    document.getElementById('btn-skip-assist-player').addEventListener('click', () => finishAssistPlayer(null));
+
     function openAssistStep(shotId) {
+        const forShot = state.shots.find(s => s.id === shotId);
+        if (forShot && forShot.mode === 'attack') {
+            openAssistPlayerStep(forShot);
+            return;
+        }
         ui.modal.classList.remove('hidden');
         ui.stepResult.classList.add('hidden');
         ui.stepCourse.classList.add('hidden');
@@ -818,11 +902,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('step-gkmove').classList.add('hidden');
         stepAssist.classList.remove('hidden');
         attackTypeRow.style.display = 'none';
-        const target = state.shots.find(s => s.id === shotId);
-        const isAttack = !!target && target.mode === 'attack';
-        modalTitle.textContent = isAttack ? '得点を記録しました' : '失点を記録しました';
-        const hintEl = document.getElementById('assist-hint');
-        if (hintEl) hintEl.textContent = isAttack ? ASSIST_HINT.attack : ASSIST_HINT.defense;
+        modalTitle.textContent = '失点を記録しました';
         pendingAssistShotId = shotId;
     }
     function finishAssist(value) {
@@ -1821,25 +1901,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const ownPatEl = document.getElementById('own-patterns');
         if (ownAstEl && ownPatEl) {
             const own = HA.stats.aggregateOwnAssist(shotsData);
-            const ownKeys = Object.keys(own.byAssist).sort((a, b) => own.byAssist[b] - own.byAssist[a]);
-            let h = '<div class="opponent-title">アシストの出どころ（得点 ' + own.goals + ' 本）</div>';
-            if (ownKeys.length === 0) {
+            const ownNames = orderByRoster(Object.keys(own.byPlayer));
+            let h = '<div class="opponent-title">アシストした選手（得点 ' + own.goals + ' 本）</div>';
+            if (ownNames.length === 0 && own.self === 0) {
                 h += '<div style="color:#666;">まだ記録がありません</div>';
             } else {
-                h += ownKeys.map(k =>
-                    `<span class="opponent-tag own">${escHtml(ASSIST_LABELS[k] || k)} <strong>${own.byAssist[k]}</strong></span>`).join('');
+                h += ownNames.map(n =>
+                    `<span class="opponent-tag own">${escHtml(n)} <strong>${own.byPlayer[n]}</strong></span>`).join('');
+                if (own.self > 0) h += `<span class="opponent-tag own">自分で持ち込み <strong>${own.self}</strong></span>`;
             }
             if (own.goalsNoAssist > 0) h += `<span class="opponent-tag muted">未入力 ${own.goalsNoAssist}</span>`;
             ownAstEl.innerHTML = h;
-            const ownRep = own.patterns.filter(p => p.count >= 2).slice(0, 5);
-            let ph = '<div class="opponent-title">2回以上出た形</div>';
+            const ownRep = own.pairs.filter(p => p.count >= 2).slice(0, 5);
+            let ph = '<div class="opponent-title">2回以上出た組み合わせ（出した選手 → 決めた選手）</div>';
             if (ownRep.length === 0) {
-                ph += '<div style="color:#666;">同じ形が2回以上出たものはまだありません</div>';
+                ph += '<div style="color:#666;">同じ組み合わせが2回以上出たものはまだありません</div>';
             } else {
-                ph += ownRep.map(p => {
-                    const parts = [escHtml(ASSIST_LABELS[p.assist] || p.assist) + ' →', SIT_LABELS[p.situation] || ''];
-                    return `<div class="opponent-pattern own"><span>${parts.filter(Boolean).join(' ')}</span><strong>×${p.count}</strong></div>`;
-                }).join('');
+                ph += ownRep.map(p =>
+                    `<div class="opponent-pattern own"><span>${escHtml(p.from)} → ${escHtml(p.to)}</span><strong>×${p.count}</strong></div>`).join('');
             }
             ownPatEl.innerHTML = ph;
         }
@@ -2287,13 +2366,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const showAssist = (shot.result === 'goal' && shot.attackType !== '7m');
         document.getElementById('edit-assist-section').classList.toggle('hidden', !showAssist);
         const assistLabel = document.getElementById('edit-assist-label');
+        const isOwnGoal = (shot.mode === 'attack');
         if (assistLabel) {
-            assistLabel.textContent = shot.mode === 'attack'
-                ? 'アシスト（得点・パスを出したポジション）'
+            assistLabel.textContent = isOwnGoal
+                ? 'アシストした選手（得点）'
                 : 'アシスト（失点・左右は画面の向き）';
         }
+        // 得点は選手を選ぶ欄、失点は場所のボタン
+        const assistRow = document.getElementById('edit-assist-row');
+        const assistSel = document.getElementById('edit-assist-player');
+        assistRow.classList.toggle('hidden', isOwnGoal);
+        assistSel.classList.toggle('hidden', !isOwnGoal);
+        if (isOwnGoal) {
+            assistSel.innerHTML = '';
+            const addOpt = (value, label) => {
+                const o = document.createElement('option');
+                o.value = value; o.textContent = label;
+                assistSel.appendChild(o);
+            };
+            addOpt('', '（未入力）');
+            addOpt('__SELF__', '自分で持ち込んだ（パスなし）');
+            playerPositions.forEach(p => addOpt(p, p));
+            if (shot.assistPlayer && !playerPositions.includes(shot.assistPlayer)) addOpt(shot.assistPlayer, shot.assistPlayer);
+            assistSel.value = shot.assistPlayer ? shot.assistPlayer : (shot.assist === 'SELF' ? '__SELF__' : '');
+        }
         document.querySelectorAll('#edit-assist-row .sit-chip').forEach(c => {
-            c.classList.toggle('selected', c.getAttribute('data-assist') === shot.assist);
+            c.classList.toggle('selected', !isOwnGoal && c.getAttribute('data-assist') === shot.assist);
         });
         document.getElementById('edit-trigger-input').value = shot.trigger || '';
         // Player
@@ -2435,9 +2533,20 @@ document.addEventListener('DOMContentLoaded', () => {
         shot.situation = HA.stats.needsSituation(shot)
             ? (document.querySelector('#edit-situation-row .sit-chip.selected')?.getAttribute('data-situation') || null)
             : null;
-        shot.assist = (shot.result === 'goal' && shot.attackType !== '7m')
-            ? (document.querySelector('#edit-assist-row .sit-chip.selected')?.getAttribute('data-assist') || null)
-            : null;
+        if (shot.result === 'goal' && shot.attackType !== '7m' && shot.mode === 'attack') {
+            // 得点: アシストした選手（シュートした本人は選べない → 未入力に戻す）
+            const v = document.getElementById('edit-assist-player').value;
+            const name = (v && v !== '__SELF__' && v !== shot.player) ? v : null;
+            shot.assistPlayer = name;
+            shot.assistRosterId = name ? rosterIdOf(name) : null;
+            shot.assist = (v === '__SELF__') ? 'SELF' : null;
+        } else {
+            shot.assist = (shot.result === 'goal' && shot.attackType !== '7m')
+                ? (document.querySelector('#edit-assist-row .sit-chip.selected')?.getAttribute('data-assist') || null)
+                : null;
+            shot.assistPlayer = null;
+            shot.assistRosterId = null;
+        }
         shot.trigger = document.getElementById('edit-trigger-input').value.trim() || null;
         // 選手を付け替えたら rosterId も追従させる（旧IDのままだと mental 側で他人に配信される）
         if (shot.player !== editingPlayerCache) {

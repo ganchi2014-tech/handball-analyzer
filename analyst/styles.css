@@ -1883,3 +1883,95 @@ html[data-fs="large"] .court-container, html[data-fs="xlarge"] .court-container 
     border-color: rgba(52, 152, 219, 0.6);
 }
 .opponent-pattern.own strong { color: var(--primary); }
+
+/* ============================================================
+ *  得点のアシスト（選手で選ぶ画面）
+ *  シュートした選手を選ぶ画面（暗い色の四角いボタン・3列）と取り違えないよう、
+ *  画面全体を黄色い枠で囲み、ボタンは黄色地に黒文字・2列・丸い形にしてある。
+ * ============================================================ */
+.modal-overlay.assist-player-mode .modal-content {
+    border: 4px solid #f1c40f;
+    border-bottom: none;
+    background: rgba(48, 38, 6, 0.96);
+}
+.assist-scorer {
+    background: rgba(52, 152, 219, 0.25);
+    border: 1px solid rgba(52, 152, 219, 0.7);
+    color: #e3f2fd;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-align: center;
+    border-radius: 8px;
+    padding: 6px 8px;
+    margin-bottom: 8px;
+}
+.modal-content h3.assist-player-title {
+    color: #f1c40f;
+    font-size: 1.25rem;
+    margin-bottom: 4px;
+}
+.assist-player-hint {
+    color: #fff;
+    margin-bottom: 8px;
+}
+.assist-player-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+    max-height: 38vh;
+    overflow-y: auto;
+}
+.assist-player-grid.hidden { display: none; }
+.assist-player-btn {
+    background: #f1c40f;
+    color: #1b1b1b;
+    border: 2px solid #b8950a;
+    border-radius: 999px;
+    min-height: 50px;
+    padding: 8px 10px;
+    font-size: 1rem;
+    font-weight: 800;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.assist-player-btn:active { background: #ffe066; transform: scale(0.97); }
+.assist-bench-toggle {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    color: #f1c40f;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-align: left;
+    padding: 6px 2px;
+    margin-bottom: 6px;
+}
+.assist-bench-toggle.hidden { display: none; }
+.assist-player-self {
+    display: block;
+    width: 100%;
+    min-height: 48px;
+    background: transparent;
+    color: #f1c40f;
+    border: 2px solid #f1c40f;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+/* 開いた直後は押せない（シュートした選手を押した指の2度押しを拾わない） */
+.assist-player-step.locked .assist-player-btn,
+.assist-player-step.locked .assist-player-self,
+.assist-player-step.locked .btn-skip {
+    opacity: 0.35;
+    pointer-events: none;
+}
+.edit-assist-select {
+    width: 100%;
+    font-size: 1rem;
+    min-height: 44px;
+}
+.edit-assist-select.hidden, #edit-assist-row.hidden { display: none; }
+html[data-fs="large"] .assist-player-btn, html[data-fs="xlarge"] .assist-player-btn { font-size: 1.05rem; }

@@ -25,7 +25,7 @@
         });
       }
     </script>
-    <link rel="stylesheet" href="styles.css?v=a15">
+    <link rel="stylesheet" href="styles.css?v=a16">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
@@ -250,7 +250,19 @@
                 <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
             </div>
 
-            <!-- Step 3: アシスト（得点・失点を保存した直後に出る） -->
+            <!-- Step 3a: 得点のアシスト（選手で選ぶ）。シュートした選手の画面と見分けがつくよう、黄色の枠・別の並びにしてある -->
+            <div id="step-assist-player" class="step hidden assist-player-step">
+                <div class="assist-scorer" id="assist-scorer">得点：—</div>
+                <h3 class="assist-player-title">🤝 アシストした選手</h3>
+                <p class="step-hint assist-player-hint">パスを出した選手を押してください</p>
+                <div id="assist-player-grid" class="assist-player-grid"></div>
+                <button type="button" class="assist-bench-toggle" id="assist-bench-toggle">▶ ベンチから選ぶ</button>
+                <div id="assist-bench-grid" class="assist-player-grid hidden"></div>
+                <button type="button" class="assist-player-self" id="btn-assist-player-self">自分で持ち込んだ（パスなし）</button>
+                <button type="button" class="btn-skip" id="btn-skip-assist-player">⏭ 分からない</button>
+            </div>
+
+            <!-- Step 3b: 失点のアシスト（場所で選ぶ。失点を保存した直後に出る） -->
             <div id="step-assist" class="step hidden">
                 <h3>アシスト</h3>
                 <p class="step-hint" id="assist-hint">点を取った選手にボールを渡した場所（左右は画面の向き）</p>
@@ -400,8 +412,8 @@
                         <li>シューターとゴールの間にDFがいなかったか。いなければ「ノーマーク」。</li>
                         <li>残りは打ち方で「ジャンプ」か「ステップ」。</li>
                     </ol>
-                    <p><strong>アシスト</strong>（得点・失点したとき。7mは聞かない）。点を取った選手にボールを渡した場所。パスなしで持ち込んだら「自分で持ち込んだ」。</p>
-                    <p>自チームの得点は、パスを出した選手のポジションで選ぶ（自チームの左45・右45）。相手の得点（失点）は、画面の向きの左右で選ぶ。</p>
+                    <p><strong>アシスト</strong>（得点・失点したとき。7mは聞かない）。パスなしで持ち込んだら「自分で持ち込んだ」。</p>
+                    <p>自チームの得点は、パスを出した<strong>選手</strong>を選ぶ。黄色い枠の画面で、シュートした選手は選べない。相手の得点（失点）は、ボールを渡した<strong>場所</strong>を画面の向きの左右で選ぶ。</p>
                     <p><strong>きっかけ</strong>は試合後に映像を見て付ける。記録を長押し → 編集で入力する。</p>
                     <p>追いつかないときは、結果と選手を先に入れる。状況は「あとで入れる」で進め、画面下の「状況 未入力」から直す。</p>
                 </div>
@@ -484,6 +496,7 @@
                     <button type="button" class="sit-chip" data-assist="RW">右サイド</button>
                     <button type="button" class="sit-chip" data-assist="SELF">自分で</button>
                 </div>
+                <select id="edit-assist-player" class="settings-input edit-assist-select hidden"></select>
             </div>
 
             <div class="edit-section" id="edit-gkmove-section">
@@ -625,7 +638,7 @@
             <div id="summary-cues" class="opponent-block"></div>
 
             <h4 style="margin-top:15px; margin-bottom:4px; color:#fff;">自チームの点の取り方</h4>
-            <div class="table-note">得点のアシスト（7mは除く）。パスを出したポジション</div>
+            <div class="table-note">得点のアシスト（7mは除く）。パスを出した選手</div>
             <div id="own-assist" class="opponent-block"></div>
             <div id="own-patterns" class="opponent-block"></div>
 
@@ -710,9 +723,9 @@
         </div>
     </div>
 
-    <script src="lib/roster.js?v=a15"></script>
-    <script src="lib/stats.js?v=a15"></script>
-    <script src="lib/csv.js?v=a15"></script>
-    <script src="app.js?v=a15"></script>
+    <script src="lib/roster.js?v=a16"></script>
+    <script src="lib/stats.js?v=a16"></script>
+    <script src="lib/csv.js?v=a16"></script>
+    <script src="app.js?v=a16"></script>
 </body>
 </html>

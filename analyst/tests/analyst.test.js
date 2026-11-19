@@ -120,7 +120,7 @@ describe('HA.csv（分析担当用の列）', () => {
         const csv = HA.csv.matchToCsv({ date: '2026-11-16', opponent: '練習', shots: [] }, []);
         const header = csv.split('\n')[0];
         expect(header.includes(',x,y,situation,assist,trigger,')).toBe(true);
-        expect(header.endsWith(',miss_type,gk_move,opp_gk,numbers,opp_def,match_id,gk_lv')).toBe(true);
+        expect(header.endsWith(',miss_type,gk_move,opp_gk,numbers,opp_def,match_id,gk_lv,assist_player,assist_rosterId')).toBe(true);
     });
     test('1件の行に状況・アシスト・きっかけが入る', () => {
         const shot = {
@@ -131,7 +131,7 @@ describe('HA.csv（分析担当用の列）', () => {
         expect(row[14]).toBe('free');
         expect(row[15]).toBe('R45');
         expect(row[16]).toBe('右45のカットインから');
-        expect(row.length).toBe(24);
+        expect(row.length).toBe(26);
     });
     test('未入力は空文字', () => {
         const row = HA.csv.shotToRow({ mode: 'attack', result: 'miss' }, {}, []);
@@ -215,7 +215,7 @@ describe('分析担当用 v2: 飛んだ先・GKの動き・きっかけ', () => 
                        oppGk: '2', numbers: 'minus', oppDef: '51' };
         const row = HA.csv.shotToRow(shot, { date: '2026-11-16', opponent: 'Test' }, []);
         expect(row[7]).toBe('OTR');
-        expect(row.slice(17)).toEqual(['out', 'L', '2', 'minus', '51', '2026-11-16_Test', 'LV2']);
+        expect(row.slice(17)).toEqual(['out', 'L', '2', 'minus', '51', '2026-11-16_Test', 'LV2', '', '']);
     });
     test('CSV: きっかけは result=cue の行として末尾に付く', () => {
         const match = { date: '2026-11-16', opponent: 'Test',
@@ -229,28 +229,33 @@ describe('分析担当用 v2: 飛んだ先・GKの動き・きっかけ', () => 
     });
 });
 
-describe('HA.stats.aggregateOwnAssist（自チームの得点のアシスト）', () => {
+describe('HA.stats.aggregateOwnAssist（自チームの得点のアシスト・選手）', () => {
     const shots = [
-        { mode: 'attack', result: 'goal', attackType: 'set', situation: 'free', assist: 'L45', player: 'A' },
-        { mode: 'attack', result: 'goal', attackType: 'set', situation: 'free', assist: 'L45', player: 'B' },
+        { mode: 'attack', result: 'goal', attackType: 'set', situation: 'free', assistPlayer: 'P1', player: 'A' },
+        { mode: 'attack', result: 'goal', attackType: 'set', situation: 'free', assistPlayer: 'P1', player: 'A' },
+        { mode: 'attack', result: 'goal', attackType: 'set', situation: 'jump', assistPlayer: 'P2', player: 'B' },
         { mode: 'attack', result: 'goal', attackType: 'fast', situation: 'free', assist: 'SELF', player: 'A' },
-        { mode: 'attack', result: 'goal', attackType: 'set', situation: 'jump', player: 'A' },              // アシスト未入力
-        { mode: 'attack', result: 'save', attackType: 'set', situation: 'free', assist: 'C', player: 'A' }, // 得点でない
-        { mode: 'attack', result: 'goal', attackType: '7m', player: 'A' },                                   // 7m は対象外
-        { mode: 'defense', result: 'goal', attackType: 'set', situation: 'free', assist: 'L45' }            // 相手
+        { mode: 'attack', result: 'goal', attackType: 'set', situation: 'jump', player: 'A' },                    // 未入力
+        { mode: 'attack', result: 'goal', attackType: 'set', situation: 'jump', assist: 'L45', player: 'A' },     // 古い形（場所）は未入力扱い
+        { mode: 'attack', result: 'save', attackType: 'set', situation: 'free', assistPlayer: 'P1', player: 'A' },// 得点でない
+        { mode: 'attack', result: 'goal', attackType: '7m', player: 'A' },                                         // 7m は対象外
+        { mode: 'defense', result: 'goal', attackType: 'set', situation: 'free', assist: 'L45' }                  // 相手
     ];
     const r = HA.stats.aggregateOwnAssist(shots);
     test('得点だけを数え、7m と相手の得点は入らない', () => {
-        expect(r.goals).toBe(4);
-        expect(r.goalsNoAssist).toBe(1);
+        expect(r.goals).toBe(6);
     });
-    test('アシストの出どころを数える', () => {
-        expect(r.byAssist.L45).toBe(2);
-        expect(r.byAssist.SELF).toBe(1);
-        expect(r.byAssist.C).toBe(undefined);
+    test('アシストした選手ごとに数える', () => {
+        expect(r.byPlayer.P1).toBe(2);
+        expect(r.byPlayer.P2).toBe(1);
     });
-    test('同じ形（アシスト × 状況）は回数の多い順', () => {
-        expect(r.patterns[0]).toEqual({ assist: 'L45', situation: 'free', count: 2 });
+    test('自分で持ち込んだ本数と未入力を分ける', () => {
+        expect(r.self).toBe(1);
+        expect(r.goalsNoAssist).toBe(2);
+    });
+    test('出した選手 → 決めた選手 の組み合わせは回数の多い順', () => {
+        expect(r.pairs[0]).toEqual({ from: 'P1', to: 'A', count: 2 });
+        expect(r.pairs.length).toBe(2);
     });
     test('空でも落ちない', () => {
         expect(HA.stats.aggregateOwnAssist([]).goals).toBe(0);
@@ -259,14 +264,30 @@ describe('HA.stats.aggregateOwnAssist（自チームの得点のアシスト）'
 });
 
 describe('HA.csv（得点のアシスト）', () => {
-    test('自チームの得点の行にも assist が入る', () => {
-        const csv = HA.csv.matchToCsv({ date: '2026-11-19', opponent: 'Test', shots: [
-            { period: 1, time: 10, mode: 'attack', result: 'goal', attackType: 'set', situation: 'free', assist: 'L45', x: 50, y: 50 }
-        ] }, []);
-        const lines = csv.replace(/^﻿/, '').split(/\r?\n/);
-        const head = lines[0].split(',');
-        const row = lines[1].split(',');
-        expect(row[head.indexOf('mode')]).toBe('attack');
-        expect(row[head.indexOf('assist')]).toBe('L45');
+    const csv = HA.csv.matchToCsv({ date: '2026-11-19', opponent: 'Test', shots: [
+        { period: 1, time: 10, mode: 'attack', result: 'goal', attackType: 'set', situation: 'free', assistPlayer: 'P1', assistRosterId: 'r01', x: 50, y: 50 },
+        { period: 1, time: 20, mode: 'attack', result: 'goal', attackType: 'fast', situation: 'free', assist: 'SELF', x: 50, y: 50 },
+        { period: 1, time: 30, mode: 'defense', result: 'goal', attackType: 'set', situation: 'free', assist: 'R45', x: 80, y: 60 }
+    ] }, []);
+    const lines = csv.replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean);
+    const head = lines[0].split(',');
+    const rows = lines.slice(1).map(l => l.split(','));
+    test('assist_player と assist_rosterId は見出しの一番後ろ（途中に入れると受け側の列がずれる）', () => {
+        expect(head[head.length - 2]).toBe('assist_player');
+        expect(head[head.length - 1]).toBe('assist_rosterId');
+        expect(head.indexOf('gk_lv')).toBe(head.length - 3);
+    });
+    test('得点の行にアシストした選手が入る', () => {
+        expect(rows[0][head.indexOf('assist_player')]).toBe('P1');
+        expect(rows[0][head.indexOf('assist_rosterId')]).toBe('r01');
+        expect(rows[0][head.indexOf('assist')]).toBe('');
+    });
+    test('自分で持ち込んだ得点は assist が SELF', () => {
+        expect(rows[1][head.indexOf('assist')]).toBe('SELF');
+        expect(rows[1][head.indexOf('assist_player')]).toBe('');
+    });
+    test('失点の行は今までどおり場所が assist に入る', () => {
+        expect(rows[2][head.indexOf('assist')]).toBe('R45');
+        expect(rows[2][head.indexOf('assist_player')]).toBe('');
     });
 });

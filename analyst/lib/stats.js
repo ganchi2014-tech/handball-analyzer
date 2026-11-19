@@ -277,25 +277,30 @@
         return 'C';
     }
 
-    // 自チームの得点の読み取り: アシストの出どころ / よく出る形（アシスト × 状況）
+    // 自チームの得点の読み取り: 誰のパスで点が入ったか / よく出る組み合わせ（出した選手 → 決めた選手）
+    //   assistPlayer = パスを出した選手、assist === 'SELF' = パスなしで持ち込んだ
     function aggregateOwnAssist(shots) {
-        const byAssist = {};
-        const patternMap = {};
-        let goals = 0, goalsNoAssist = 0;
+        const byPlayer = {};
+        const pairMap = {};
+        let goals = 0, self = 0, goalsNoAssist = 0;
         (shots || []).forEach(s => {
             if (s.mode !== 'attack' || !needsSituation(s) || s.result !== 'goal') return;
             goals++;
-            if (!s.assist) { goalsNoAssist++; return; }
-            byAssist[s.assist] = (byAssist[s.assist] || 0) + 1;
-            const sit = SITUATIONS.includes(s.situation) ? s.situation : 'none';
-            const key = [s.assist, sit].join('|');
-            patternMap[key] = (patternMap[key] || 0) + 1;
+            if (s.assistPlayer) {
+                byPlayer[s.assistPlayer] = (byPlayer[s.assistPlayer] || 0) + 1;
+                const key = s.assistPlayer + '\u0001' + (s.player || '(選手なし)');
+                pairMap[key] = (pairMap[key] || 0) + 1;
+            } else if (s.assist === 'SELF') {
+                self++;
+            } else {
+                goalsNoAssist++;
+            }
         });
-        const patterns = Object.keys(patternMap).map(k => {
-            const p = k.split('|');
-            return { assist: p[0], situation: p[1], count: patternMap[k] };
+        const pairs = Object.keys(pairMap).map(k => {
+            const p = k.split('\u0001');
+            return { from: p[0], to: p[1], count: pairMap[k] };
         }).sort((a, b) => b.count - a.count);
-        return { byAssist, patterns, goals, goalsNoAssist };
+        return { byPlayer, pairs, goals, self, goalsNoAssist };
     }
 
     // 相手の攻撃の読み取り: 状況ごとの得点 / アシストの出どころ / よく出る形

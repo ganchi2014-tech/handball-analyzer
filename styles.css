@@ -1453,7 +1453,8 @@ body {
 
 /* ── ブラウザで開くと上下の帯の分だけ画面が短くなる。下のボタンが切れないように、
       入りきらないときは縦に動かせるようにし、短い画面では下のボタンを1段にまとめる ── */
-#app { overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+/* 2026-11-22: #app を縦に動かせる入れ物にする指定（overflow-y:auto など）は外した。
+   これを入れた版に替わってから、スマホで「どのボタンも押せない」が出たため、元の形に戻す。 */
 .court-container { flex: 1 0 200px; min-height: 200px; }
 .match-info, .scoreboard, .gk-toggle, .live-tags, .mode-row, .dashboard, .controls { flex-shrink: 0; }
 @media (max-height: 780px) {

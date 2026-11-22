@@ -577,6 +577,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 指を離してから、入力の画面が実際に描かれるまでの時間（ms）
     function diagMeasureOpen(t0) {
         diagBump('open');
+        window.HA_OPENED = (window.HA_OPENED || 0) + 1;
         requestAnimationFrame(() => requestAnimationFrame(() => {
             diag.lat.push(Math.round(performance.now() - t0));
             if (diag.lat.length > 200) diag.lat.shift();

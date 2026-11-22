@@ -25,7 +25,55 @@
         });
       }
     </script>
-    <link rel="stylesheet" href="styles.css?v=29">
+    <script>
+      // ── 見張り（2026-11-22「どのボタンも押せない」の原因さがし）──
+      // 本体が止まっていてもボタンに頼らず分かるように、画面の上に赤い帯で出す。外には送らない。
+      (function () {
+        var errs = [], touches = 0, clicks = 0, shown = false;
+        window.addEventListener('error', function (e) {
+          var f = (e.filename || '').split('/').pop();
+          errs.push((e.message || 'error') + (f ? ' @' + f + ':' + e.lineno : ''));
+        });
+        window.addEventListener('unhandledrejection', function (e) {
+          errs.push('reject: ' + (e.reason && e.reason.message || e.reason));
+        });
+        function info() {
+          var ua = navigator.userAgent;
+          var dev = /iPhone|iPad/.test(ua) ? 'iOS' + ((ua.match(/OS (\d+_\d+)/) || [])[1] || '') : /Android/.test(ua) ? 'Android' + ((ua.match(/Android (\d+)/) || [])[1] || '') : 'PC';
+          var br = /CriOS|Chrome/.test(ua) ? 'Chrome' : /Line\//.test(ua) ? 'LINE' : /Safari/.test(ua) ? 'Safari' : '他';
+          var sa = (navigator.standalone === true) || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+          var app = document.getElementById('app');
+          return dev + '・' + br + '・' + (sa ? 'ホーム画面' : 'ブラウザ') + '・' + innerWidth + '×' + innerHeight
+            + (app ? '・縦' + app.scrollHeight + '/' + app.clientHeight : '')
+            + '・本体' + (window.HA_APP_STARTED ? '○' : '×') + '・タッチ' + touches + '・ボタン' + clicks + '・入力画面' + (window.HA_OPENED || 0);
+        }
+        function show(why) {
+          if (shown || !document.body) return;
+          shown = true;
+          var d = document.createElement('div');
+          d.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:99999;background:#c0392b;color:#fff;padding:10px;font-size:13px;font-weight:700;line-height:1.5;text-align:center;';
+          d.textContent = '⚠ ' + why + '（この画面の写真を先生に送ってください）　' + (errs[0] ? '[' + errs[0] + '] ' : '') + info();
+          d.addEventListener('click', function () { d.remove(); });
+          document.body.appendChild(d);
+        }
+        document.addEventListener('touchstart', function () {
+          touches++;
+          // 何度押しても、ボタンにも入力の画面にも届いていない
+          if (touches >= 10 && clicks === 0 && !(window.HA_OPENED > 0)) show('押しても反応していません');
+        }, { capture: true, passive: true });
+        document.addEventListener('click', function (e) {
+          // ボタンなどに届いた分だけ数える
+          if (e.target && e.target.closest && e.target.closest('button, input, label, select, summary')) clicks++;
+        }, true);
+        window.addEventListener('load', function () {
+          setTimeout(function () {
+            if (!window.HA_APP_STARTED) show('アプリが動いていません。電波のある所で開き直してください');
+            else if (errs.length) show('エラーが出ています');
+          }, 1500);
+        });
+      })();
+    </script>
+    <link rel="stylesheet" href="styles.css?v=30">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
@@ -584,19 +632,6 @@
     <script src="lib/roster.js?v=16"></script>
     <script src="lib/stats.js?v=17"></script>
     <script src="lib/csv.js?v=17"></script>
-    <script src="app.js?v=35"></script>
-    <script>
-      // アプリの本体が読み込めていないとき（電波が弱いなど）は、押しても動かない。黙って止まらずに知らせる
-      window.addEventListener('load', function () {
-        var dateEl = document.getElementById('match-date');
-        // 本体が動くと、目印が立つ（前の版の本体でも、試合日の欄に今日の日付が入る）
-        if (window.HA_APP_STARTED || (dateEl && dateEl.value)) return;
-        var d = document.createElement('div');
-        d.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:9999;background:#c0392b;color:#fff;padding:14px 12px;font-size:15px;font-weight:700;line-height:1.6;text-align:center;';
-        d.innerHTML = '⚠ アプリが読み込めていません（このままでは記録できません）<br>電波のある所で <button type="button" style="font-size:15px;font-weight:700;padding:4px 12px;border-radius:6px;border:none;">開き直す</button> を押してください';
-        d.querySelector('button').onclick = function () { location.reload(); };
-        document.body.appendChild(d);
-      });
-    </script>
+    <script src="app.js?v=36"></script>
 </body>
 </html>

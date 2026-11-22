@@ -505,6 +505,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ui.stepPlayer.classList.add('hidden');
             ui.stepToReason.classList.remove('hidden');
             resetAttackChips('set');
+            lockInput();
         });
     }
 
@@ -554,6 +555,73 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ── 端末の中に残す記録（「押しても効かない」の原因を数字で分けるため。2026-11-22）──
+    // 外には送らない。設定画面の一番下に1行で出す。日付が変わったら数え直す。
+    const DIAG_KEY = 'handball-analyzer-diag-v1';
+    const diag = (function () {
+        const today = new Date().toDateString();
+        let d = null;
+        try { d = JSON.parse(localStorage.getItem(DIAG_KEY) || 'null'); } catch (e) {}
+        if (!d || d.day !== today) d = { day: today, ts: 0, te: 0, tc: 0, open: 0, lock: 0, lat: [] };
+        return d;
+    })();
+    let diagSaveTimer = null;
+    function diagBump(key) {
+        diag[key] = (diag[key] || 0) + 1;
+        if (diagSaveTimer) return;
+        diagSaveTimer = setTimeout(() => {
+            diagSaveTimer = null;
+            try { localStorage.setItem(DIAG_KEY, JSON.stringify(diag)); } catch (e) {}
+        }, 1000);
+    }
+    // 指を離してから、入力の画面が実際に描かれるまでの時間（ms）
+    function diagMeasureOpen(t0) {
+        diagBump('open');
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            diag.lat.push(Math.round(performance.now() - t0));
+            if (diag.lat.length > 200) diag.lat.shift();
+        }));
+    }
+    function diagText() {
+        const lat = diag.lat.slice().sort((a, b) => a - b);
+        const med = lat.length ? lat[Math.floor(lat.length / 2)] : '-';
+        const max = lat.length ? lat[lat.length - 1] : '-';
+        const rate = diag.ts ? Math.round((diag.tc / diag.ts) * 100) : 0;
+        const standalone = (window.navigator.standalone === true)
+            || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+        const ua = navigator.userAgent;
+        const dev = /iPhone|iPad/.test(ua) ? 'iOS ' + ((ua.match(/OS (\d+_\d+)/) || [])[1] || '').replace('_', '.')
+                  : /Android/.test(ua) ? 'Android ' + ((ua.match(/Android (\d+)/) || [])[1] || '') : 'PC';
+        return `押した ${diag.ts}／離した ${diag.te}／取り消された ${diag.tc}（${rate}%）`
+            + `／画面が出た ${diag.open}／出るまで 中央${med}ms 最大${max}ms／早押し止め ${diag.lock}`
+            + `／${dev}・${standalone ? 'ホーム画面' : 'ブラウザ'}・画面${window.innerWidth}×${window.innerHeight}`
+            + `・縦${ui.app.scrollHeight}/${ui.app.clientHeight}`;
+    }
+
+    // ── 押しすぎ止め：画面が替わった直後は、少しの間だけ押しても受けない ──
+    // 入力の画面は同じ場所で中身が替わるので、2度押しの2回目が次の画面のボタンに当たってしまう。
+    // 長すぎると「効きが遅い」の元になるので、様子を見て短くしてよい（上限 350ms）。
+    const INPUT_LOCK_MS = 300;
+    let inputLockUntil = 0;
+    function lockInput() { inputLockUntil = performance.now() + INPUT_LOCK_MS; }
+    function inputLocked() { return performance.now() < inputLockUntil; }
+    function visibleStepKey() {
+        if (ui.modal.classList.contains('hidden')) return 'closed';
+        const st = ui.modal.querySelector('.step:not(.hidden)');
+        return st ? st.id : 'none';
+    }
+    ui.modal.addEventListener('click', (e) => {
+        if (inputLocked()) {
+            e.stopPropagation();
+            e.preventDefault();
+            diagBump('lock');
+            return;
+        }
+        // この1回で画面が替わったら、次の少しの間は受けない
+        const before = visibleStepKey();
+        setTimeout(() => { if (visibleStepKey() !== before) lockInput(); }, 0);
+    }, true);
+
     // ── Court interactions (swipe / tap / long-press) ──
     let pointerStart = null;
     let courtLongPressTimer = null;
@@ -572,6 +640,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function onCourtDown(e) {
         if (e.type === 'touchstart') e.preventDefault();
+        if (e.type === 'touchstart') diagBump('ts');
+        // 入力の画面が閉じた直後の2度押しで、次の1本が始まってしまうのを止める
+        if (inputLocked()) { diagBump('lock'); return; }
         const c = getEventCoords(e, 'start');
         if (c.x == null || c.y == null) return;
         pointerStart = c;
@@ -617,11 +688,15 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.stepPlayer.classList.add('hidden');
         ui.stepToReason.classList.remove('hidden');
         resetAttackChips('set');
+        lockInput();
+        diagMeasureOpen(performance.now());
     }
 
     function onCourtUp(e) {
+        if (e.type === 'touchend') diagBump('te');
         clearCourtLongPress();
         if (!pointerStart) return;
+        const tUp = performance.now();
         if (e.type === 'touchend') e.preventDefault();
         const c = getEventCoords(e, 'end');
         const dx = c.x - pointerStart.x;
@@ -663,9 +738,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // Tap (or swipe disabled): full modal
             openModal();
         }
+        lockInput();
+        diagMeasureOpen(tUp);
     }
 
-    function onCourtCancel() {
+    function onCourtCancel(e) {
+        if (e && e.type === 'touchcancel') diagBump('tc');
         clearCourtLongPress();
         pointerStart = null;
         hideSwipeHint();
@@ -1539,6 +1617,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function openSettingsModal() {
         renderRosterEditor();
+        const dl = document.getElementById('diag-line');
+        if (dl) dl.textContent = diagText();
         ui_settings.modal.classList.remove('hidden');
     }
     window.closeSettingsModal = function() {

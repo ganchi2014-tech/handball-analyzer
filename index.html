@@ -338,6 +338,11 @@
                 <div id="submit-status" class="submit-status hidden" style="margin-top:8px;"></div>
             </details>
 
+            <!-- 動きの記録（押しても効かないときの原因さがし用。外には送らない） -->
+            <div style="font-size:0.68rem; color:var(--text-muted); line-height:1.5; margin:6px 0; user-select:text; -webkit-user-select:text;">
+                動きの記録：<span id="diag-line"></span>
+            </div>
+
             <button class="btn-cancel" onclick="closeSettingsModal()">閉じる</button>
         </div>
     </div>
@@ -579,7 +584,7 @@
     <script src="lib/roster.js?v=16"></script>
     <script src="lib/stats.js?v=17"></script>
     <script src="lib/csv.js?v=17"></script>
-    <script src="app.js?v=34"></script>
+    <script src="app.js?v=35"></script>
     <script>
       // アプリの本体が読み込めていないとき（電波が弱いなど）は、押しても動かない。黙って止まらずに知らせる
       window.addEventListener('load', function () {

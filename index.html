@@ -580,5 +580,18 @@
     <script src="lib/stats.js?v=17"></script>
     <script src="lib/csv.js?v=17"></script>
     <script src="app.js?v=34"></script>
+    <script>
+      // アプリの本体が読み込めていないとき（電波が弱いなど）は、押しても動かない。黙って止まらずに知らせる
+      window.addEventListener('load', function () {
+        var dateEl = document.getElementById('match-date');
+        // 本体が動くと、目印が立つ（前の版の本体でも、試合日の欄に今日の日付が入る）
+        if (window.HA_APP_STARTED || (dateEl && dateEl.value)) return;
+        var d = document.createElement('div');
+        d.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:9999;background:#c0392b;color:#fff;padding:14px 12px;font-size:15px;font-weight:700;line-height:1.6;text-align:center;';
+        d.innerHTML = '⚠ アプリが読み込めていません（このままでは記録できません）<br>電波のある所で <button type="button" style="font-size:15px;font-weight:700;padding:4px 12px;border-radius:6px;border:none;">開き直す</button> を押してください';
+        d.querySelector('button').onclick = function () { location.reload(); };
+        document.body.appendChild(d);
+      });
+    </script>
 </body>
 </html>

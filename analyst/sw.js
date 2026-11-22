@@ -1,8 +1,14 @@
 // Service Worker - handball-analyzer 分析担当用 v1 (オフライン起動対応)
 // 遠征先の圏外体育館でも起動できるよう、全資産をプリキャッシュする。
 // 記録は localStorage、送信はオンライン復帰後でよい設計。
-const CACHE_NAME = 'handball-analyst-v16';
+const CACHE_NAME = 'handball-analyst-v17';
+// 自分の系統のキャッシュの名前の頭。同じ場所にある他のアプリ（生徒用・メンタル・LAB）の分には触らない
+const CACHE_PREFIX = 'handball-analyst-';
 
+// ── 決まり（2026-11-21 の不具合「画面は出るが押しても動かない」を受けて）──
+// ・新しい版は、下の資産が「全部」取れたときだけ入れ替わる。1つでも取れなければ、前の版のまま動き続ける。
+// ・下の資産はキャッシュにある物をそのまま出す（裏で書きかえない）。
+//   → アプリを直したら、必ず CACHE_NAME を上げる。上げないと端末に届かない。
 const ASSETS = [
   './',
   './index.html',
@@ -27,28 +33,30 @@ const NO_CACHE_HOSTS = [
   'securetoken'
 ];
 
+const ASSET_URLS = ASSETS.map(u => new URL(u, self.location).href);
+
 self.addEventListener('install', e => {
+  // 1つでも取れなかったら失敗にする（＝前の版が残り、次に開いたときにまた試す）
   e.waitUntil(
     caches.open(CACHE_NAME).then(cache =>
       Promise.all(ASSETS.map(url =>
-        fetch(new Request(url, { mode: url.startsWith('http') ? 'no-cors' : 'same-origin' }))
-          .then(resp => cache.put(url, resp))
-          .catch(err => console.warn('[SW] precache failed:', url, err))
+        fetch(new Request(url, { mode: url.startsWith('http') ? 'no-cors' : 'same-origin', cache: 'reload' }))
+          .then(resp => {
+            if (!resp || !(resp.status === 200 || resp.type === 'opaque')) throw new Error('precache failed: ' + url);
+            return cache.put(url, resp);
+          })
       ))
-    )
+    ).then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
+  // ここに来るのは全部そろった後だけ。自分の系統の古い版だけ消す
   e.waitUntil(
     caches.keys().then(keys => Promise.all(
-      // 分析担当用: 自分の系統（handball-analyst-）の古いキャッシュだけ消す。
-      // 同じ場所にある生徒用アプリのキャッシュには触らない。
-      keys.filter(k => k.startsWith('handball-analyst-') && k !== CACHE_NAME).map(k => caches.delete(k))
-    ))
+      keys.filter(k => k.startsWith(CACHE_PREFIX) && k !== CACHE_NAME).map(k => caches.delete(k))
+    )).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', e => {
@@ -57,19 +65,21 @@ self.addEventListener('fetch', e => {
   if (NO_CACHE_HOSTS.some(host => url.hostname.includes(host))) return;
 
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      const networkFetch = fetch(e.request).then(resp => {
-        if (resp && (resp.status === 200 || resp.type === 'opaque')) {
-          const respClone = resp.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(e.request, respClone));
-        }
-        return resp;
-      }).catch(() => {
-        if (cached) return cached;
-        if (e.request.mode === 'navigate') return caches.match('./index.html');
-        return Response.error();
+    caches.open(CACHE_NAME).then(cache => {
+      // 画面そのもの（index.html）と、そろえてある資産は、キャッシュの物をそのまま出す
+      const scopePath = new URL('./', self.location).pathname;
+      // 自分の画面だけ
+      const isPage = e.request.mode === 'navigate' && (url.pathname === scopePath || url.pathname === scopePath + 'index.html');
+      const key = isPage ? './index.html' : e.request;
+      return cache.match(key).then(cached => {
+        if (cached && (isPage || ASSET_URLS.includes(e.request.url))) return cached;
+        // それ以外（フォントなど）は、あれば出しつつ裏で新しくする
+        const networkFetch = fetch(e.request).then(resp => {
+          if (resp && (resp.status === 200 || resp.type === 'opaque')) cache.put(e.request, resp.clone());
+          return resp;
+        }).catch(() => cached || Response.error());
+        return cached || networkFetch;
       });
-      return cached || networkFetch;
     })
   );
 });

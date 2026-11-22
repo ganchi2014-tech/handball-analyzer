@@ -3030,4 +3030,6 @@ document.addEventListener('DOMContentLoaded', () => {
     attachSwipeDownClose(ui.modal, () => window.closeModal());
     attachSwipeDownClose(ui.summaryModal, () => window.closeSummaryModal());
     attachSwipeDownClose(ui.lineupModal, () => window.closeLineupModal());
+    // ここまで来たら本体は動いている（index.html の見張りが見る目印）
+    window.HA_APP_STARTED = true;
 });
